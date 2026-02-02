@@ -81,6 +81,20 @@
               </div>
             </div>
           </section>
+
+          <section class="card">
+            <h2>Круговые диаграммы</h2>
+            <div class="charts">
+              <div class="chart-card">
+                <h3>Структура расходов</h3>
+                <div id="expensePie" class="chart"></div>
+              </div>
+              <div class="chart-card">
+                <h3>Структура доходов</h3>
+                <div id="incomePie" class="chart"></div>
+              </div>
+            </div>
+          </section>
         </section>
 
         <section class="view" data-view="transactions">
@@ -143,23 +157,46 @@
         <section class="view" data-view="categories">
           <section class="card">
             <h2>Категории</h2>
-            <div class="form two-columns">
-              <label>
-                Новая категория
-                <input type="text" id="newCategory" placeholder="Например, Еда" />
-              </label>
-              <label>
-                Подкатегория
-                <input type="text" id="newSubcategory" placeholder="Например, Еда вне дома" />
-              </label>
-              <label>
-                Для категории
-                <select id="categoryForSub"></select>
-              </label>
-              <button id="addCategory" class="button secondary" type="button">Добавить категорию</button>
-              <button id="addSubcategory" class="button secondary" type="button">Добавить подкатегорию</button>
+            <div class="category-layout">
+              <div class="category-panel">
+                <h3>Новая категория</h3>
+                <div class="form two-columns">
+                  <label>
+                    Название
+                    <input type="text" id="newCategory" placeholder="Например, Еда" />
+                  </label>
+                  <label>
+                    Первая подкатегория
+                    <input type="text" id="newSubcategory" placeholder="Например, Еда вне дома" />
+                  </label>
+                  <button id="addCategory" class="button secondary" type="button">Добавить категорию</button>
+                </div>
+                <p class="hint">Если подкатегория не указана, добавится «Без подкатегории».</p>
+              </div>
+
+              <div class="category-panel">
+                <h3>Добавить подкатегорию</h3>
+                <div class="form two-columns">
+                  <label>
+                    Для категории
+                    <select id="categoryForSub"></select>
+                  </label>
+                  <label>
+                    Название подкатегории
+                    <input type="text" id="newSubcategoryForCategory" placeholder="Например, Продукты" />
+                  </label>
+                  <button id="addSubcategory" class="button secondary" type="button">Добавить подкатегорию</button>
+                </div>
+              </div>
             </div>
-            <p class="hint">Категории и подкатегории сохраняются локально в браузере.</p>
+          </section>
+
+          <section class="card">
+            <div class="category-header">
+              <h2>Управление категориями</h2>
+              <p class="hint">Редактируйте, удаляйте и перемещайте подкатегории между категориями.</p>
+            </div>
+            <div id="categoryManager" class="category-manager"></div>
           </section>
         </section>
 

@@ -12,16 +12,20 @@ const addCategoryButton = document.getElementById("addCategory");
 const addSubcategoryButton = document.getElementById("addSubcategory");
 const newCategoryInput = document.getElementById("newCategory");
 const newSubcategoryInput = document.getElementById("newSubcategory");
+const newSubcategoryForCategoryInput = document.getElementById("newSubcategoryForCategory");
 const expenseCategoryChart = document.getElementById("expenseCategoryChart");
 const incomeCategoryChart = document.getElementById("incomeCategoryChart");
 const expenseSubcategoryChart = document.getElementById("expenseSubcategoryChart");
+const expensePie = document.getElementById("expensePie");
+const incomePie = document.getElementById("incomePie");
+const categoryManager = document.getElementById("categoryManager");
 const navLinks = document.querySelectorAll("[data-view-target]");
 const views = document.querySelectorAll("[data-view]");
 const viewTitle = document.getElementById("viewTitle");
 const layoutButtons = document.querySelectorAll("[data-layout]");
 
 const STORAGE_KEY = "budget.transactions.v2";
-const CATEGORY_KEY = "budget.categories.v1";
+const CATEGORY_KEY = "budget.categories.v2";
 const VIEW_KEY = "budget.view.active";
 const LAYOUT_KEY = "budget.layout";
 const DEFAULT_SUBCATEGORY = "Без подкатегории";
@@ -73,8 +77,8 @@ const loadCategories = () => {
   };
 };
 
-const saveCategories = (categories) => {
-  localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
+const saveCategories = (nextCategories) => {
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(nextCategories));
 };
 
 let transactions = loadTransactions();
@@ -203,6 +207,75 @@ const renderChart = (container, totals, emptyText) => {
   });
 };
 
+const buildPie = (totals) => {
+  const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  if (total === 0) {
+    return { entries: [], total };
+  }
+  return { entries, total };
+};
+
+const renderPie = (container, totals, emptyText) => {
+  container.innerHTML = "";
+  const { entries, total } = buildPie(totals);
+
+  if (entries.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = emptyText;
+    container.appendChild(empty);
+    return;
+  }
+
+  const chart = document.createElement("div");
+  chart.className = "pie-chart";
+
+  const ring = document.createElement("div");
+  ring.className = "pie-ring";
+
+  let cumulative = 0;
+  const segments = entries
+    .map(([, value], index) => {
+      const start = cumulative;
+      const portion = (value / total) * 100;
+      cumulative += portion;
+      return `${palette[index % palette.length]} ${start}% ${cumulative}%`;
+    })
+    .join(", ");
+
+  ring.style.background = `conic-gradient(${segments})`;
+
+  const totalLabel = document.createElement("div");
+  totalLabel.className = "pie-total";
+  totalLabel.innerHTML = `<span>Итого</span><strong>${currencyFormatter.format(total)}</strong>`;
+
+  chart.appendChild(ring);
+  chart.appendChild(totalLabel);
+
+  const legend = document.createElement("div");
+  legend.className = "pie-legend";
+
+  entries.forEach(([label, value], index) => {
+    const item = document.createElement("div");
+    item.className = "pie-legend-item";
+
+    const swatch = document.createElement("span");
+    swatch.className = "pie-swatch";
+    swatch.style.background = palette[index % palette.length];
+
+    const text = document.createElement("div");
+    text.innerHTML = `<strong>${label}</strong><span>${currencyFormatter.format(value)}</span>`;
+
+    item.appendChild(swatch);
+    item.appendChild(text);
+    legend.appendChild(item);
+  });
+
+  container.appendChild(chart);
+  container.appendChild(legend);
+};
+
 const renderCharts = () => {
   renderChart(
     expenseCategoryChart,
@@ -218,6 +291,16 @@ const renderCharts = () => {
     expenseSubcategoryChart,
     buildSubTotals("expense"),
     "Добавьте расходы с подкатегориями, чтобы увидеть детализацию."
+  );
+  renderPie(
+    expensePie,
+    buildTotals("expense"),
+    "Добавьте расходы, чтобы увидеть диаграмму."
+  );
+  renderPie(
+    incomePie,
+    buildTotals("income"),
+    "Добавьте доходы, чтобы увидеть диаграмму."
   );
 };
 
@@ -248,6 +331,7 @@ const renderCategories = () => {
 
   const selectedCategory = categorySelect.value || categoryNames[0];
   updateSubcategoryOptions(selectedCategory);
+  renderCategoryManager();
 };
 
 const updateSubcategoryOptions = (categoryName) => {
@@ -268,18 +352,20 @@ const addCategory = () => {
     return;
   }
   if (!categories[name]) {
-    categories[name] = [DEFAULT_SUBCATEGORY];
+    const firstSubcategory = newSubcategoryInput.value.trim() || DEFAULT_SUBCATEGORY;
+    categories[name] = [firstSubcategory];
     saveCategories(categories);
     renderCategories();
     categorySelect.value = name;
     updateSubcategoryOptions(name);
   }
   newCategoryInput.value = "";
+  newSubcategoryInput.value = "";
 };
 
 const addSubcategory = () => {
   const categoryName = categoryForSubSelect.value;
-  const subName = newSubcategoryInput.value.trim();
+  const subName = newSubcategoryForCategoryInput.value.trim();
   if (!categoryName || !subName) {
     return;
   }
@@ -293,7 +379,202 @@ const addSubcategory = () => {
     categorySelect.value = categoryName;
     updateSubcategoryOptions(categoryName);
   }
-  newSubcategoryInput.value = "";
+  newSubcategoryForCategoryInput.value = "";
+};
+
+const renameCategory = (oldName, newName) => {
+  if (!newName || oldName === newName || categories[newName]) {
+    return;
+  }
+  const subs = categories[oldName];
+  delete categories[oldName];
+  categories[newName] = subs;
+  transactions = transactions.map((item) =>
+    item.category === oldName ? { ...item, category: newName } : item
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  saveCategories(categories);
+  renderCategories();
+};
+
+const renameSubcategory = (categoryName, oldName, newName) => {
+  if (!newName || oldName === newName) {
+    return;
+  }
+  categories[categoryName] = categories[categoryName].map((item) =>
+    item === oldName ? newName : item
+  );
+  transactions = transactions.map((item) =>
+    item.category === categoryName && item.subcategory === oldName
+      ? { ...item, subcategory: newName }
+      : item
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  saveCategories(categories);
+  renderCategories();
+};
+
+const moveSubcategory = (fromCategory, subName, toCategory) => {
+  if (fromCategory === toCategory) {
+    return;
+  }
+  categories[fromCategory] = categories[fromCategory].filter((item) => item !== subName);
+  ensureDefaultSubcategory(categories[fromCategory]);
+  if (!categories[toCategory].includes(subName)) {
+    categories[toCategory].push(subName);
+  }
+  transactions = transactions.map((item) =>
+    item.category === fromCategory && item.subcategory === subName
+      ? { ...item, category: toCategory }
+      : item
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  saveCategories(categories);
+  renderCategories();
+};
+
+const deleteSubcategory = (categoryName, subName) => {
+  if (subName === DEFAULT_SUBCATEGORY) {
+    return;
+  }
+  categories[categoryName] = categories[categoryName].filter((item) => item !== subName);
+  ensureDefaultSubcategory(categories[categoryName]);
+  transactions = transactions.map((item) =>
+    item.category === categoryName && item.subcategory === subName
+      ? { ...item, subcategory: DEFAULT_SUBCATEGORY }
+      : item
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  saveCategories(categories);
+  renderCategories();
+};
+
+const deleteCategory = (categoryName) => {
+  const remaining = Object.keys(categories).filter((name) => name !== categoryName);
+  if (remaining.length === 0) {
+    alert("Нужна хотя бы одна категория.");
+    return;
+  }
+  delete categories[categoryName];
+  const fallback = remaining[0];
+  transactions = transactions.map((item) =>
+    item.category === categoryName ? { ...item, category: fallback, subcategory: DEFAULT_SUBCATEGORY } : item
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  saveCategories(categories);
+  renderCategories();
+};
+
+const renderCategoryManager = () => {
+  categoryManager.innerHTML = "";
+  const sorted = Object.entries(categories).sort(([a], [b]) => a.localeCompare(b));
+
+  sorted.forEach(([categoryName, subs]) => {
+    const card = document.createElement("div");
+    card.className = "category-card";
+
+    const header = document.createElement("div");
+    header.className = "category-card-header";
+
+    const title = document.createElement("div");
+    title.innerHTML = `<strong>${categoryName}</strong><span>${subs.length} подкатегорий</span>`;
+
+    const actions = document.createElement("div");
+    actions.className = "category-actions";
+
+    const renameBtn = document.createElement("button");
+    renameBtn.className = "chip";
+    renameBtn.textContent = "Переименовать";
+    renameBtn.addEventListener("click", () => {
+      const nextName = prompt("Новое имя категории", categoryName);
+      if (nextName) {
+        renameCategory(categoryName, nextName.trim());
+      }
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "chip danger";
+    deleteBtn.textContent = "Удалить";
+    deleteBtn.addEventListener("click", () => {
+      if (confirm(`Удалить категорию «${categoryName}»?`)) {
+        deleteCategory(categoryName);
+      }
+    });
+
+    actions.appendChild(renameBtn);
+    actions.appendChild(deleteBtn);
+    header.appendChild(title);
+    header.appendChild(actions);
+
+    const list = document.createElement("div");
+    list.className = "subcategory-list";
+
+    subs.forEach((sub) => {
+      const row = document.createElement("div");
+      row.className = "subcategory-row";
+
+      const name = document.createElement("span");
+      name.textContent = sub;
+
+      const tools = document.createElement("div");
+      tools.className = "subcategory-tools";
+
+      const moveSelect = document.createElement("select");
+      Object.keys(categories)
+        .filter((name) => name !== categoryName)
+        .forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = `Перенести в: ${name}`;
+          moveSelect.appendChild(option);
+        });
+      if (moveSelect.options.length === 0) {
+        moveSelect.disabled = true;
+      }
+
+      const moveBtn = document.createElement("button");
+      moveBtn.className = "chip";
+      moveBtn.textContent = "Перенести";
+      moveBtn.addEventListener("click", () => {
+        if (moveSelect.value) {
+          moveSubcategory(categoryName, sub, moveSelect.value);
+        }
+      });
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "chip";
+      editBtn.textContent = "Редактировать";
+      editBtn.addEventListener("click", () => {
+        const nextName = prompt("Новое имя подкатегории", sub);
+        if (nextName) {
+          renameSubcategory(categoryName, sub, nextName.trim());
+        }
+      });
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "chip danger";
+      deleteBtn.textContent = "Удалить";
+      deleteBtn.disabled = sub === DEFAULT_SUBCATEGORY;
+      deleteBtn.addEventListener("click", () => {
+        if (confirm(`Удалить подкатегорию «${sub}»?`)) {
+          deleteSubcategory(categoryName, sub);
+        }
+      });
+
+      tools.appendChild(moveSelect);
+      tools.appendChild(moveBtn);
+      tools.appendChild(editBtn);
+      tools.appendChild(deleteBtn);
+
+      row.appendChild(name);
+      row.appendChild(tools);
+      list.appendChild(row);
+    });
+
+    card.appendChild(header);
+    card.appendChild(list);
+    categoryManager.appendChild(card);
+  });
 };
 
 const render = () => {
@@ -364,6 +645,13 @@ newCategoryInput.addEventListener("keydown", (event) => {
 });
 
 newSubcategoryInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addCategory();
+  }
+});
+
+newSubcategoryForCategoryInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     addSubcategory();
