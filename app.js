@@ -458,7 +458,9 @@ const deleteCategory = (categoryName) => {
   delete categories[categoryName];
   const fallback = remaining[0];
   transactions = transactions.map((item) =>
-    item.category === categoryName ? { ...item, category: fallback, subcategory: DEFAULT_SUBCATEGORY } : item
+    item.category === categoryName
+      ? { ...item, category: fallback, subcategory: DEFAULT_SUBCATEGORY }
+      : item
   );
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
@@ -472,6 +474,7 @@ const renderCategoryManager = () => {
   sorted.forEach(([categoryName, subs]) => {
     const card = document.createElement("div");
     card.className = "category-card";
+    card.dataset.category = categoryName;
 
     const header = document.createElement("div");
     header.className = "category-card-header";
@@ -508,10 +511,23 @@ const renderCategoryManager = () => {
 
     const list = document.createElement("div");
     list.className = "subcategory-list";
+    list.dataset.dropzone = categoryName;
+
+    const dropHint = document.createElement("div");
+    dropHint.className = "drop-hint";
+    dropHint.textContent = "Перетащите подкатегорию сюда";
+    list.appendChild(dropHint);
 
     subs.forEach((sub) => {
       const row = document.createElement("div");
       row.className = "subcategory-row";
+      row.draggable = sub !== DEFAULT_SUBCATEGORY;
+      row.dataset.category = categoryName;
+      row.dataset.subcategory = sub;
+
+      if (sub === DEFAULT_SUBCATEGORY) {
+        row.classList.add("is-disabled");
+      }
 
       const name = document.createElement("span");
       name.textContent = sub;
@@ -575,6 +591,67 @@ const renderCategoryManager = () => {
     card.appendChild(list);
     categoryManager.appendChild(card);
   });
+};
+
+const handleDragStart = (event) => {
+  const row = event.target.closest(".subcategory-row");
+  if (!row || row.classList.contains("is-disabled")) {
+    return;
+  }
+  event.dataTransfer.setData(
+    "text/plain",
+    JSON.stringify({
+      category: row.dataset.category,
+      subcategory: row.dataset.subcategory,
+    })
+  );
+  event.dataTransfer.effectAllowed = "move";
+  row.classList.add("is-dragging");
+};
+
+const handleDragEnd = (event) => {
+  const row = event.target.closest(".subcategory-row");
+  if (row) {
+    row.classList.remove("is-dragging");
+  }
+  document
+    .querySelectorAll(".subcategory-list.is-drop-target")
+    .forEach((list) => list.classList.remove("is-drop-target"));
+};
+
+const handleDragOver = (event) => {
+  const list = event.target.closest(".subcategory-list");
+  if (!list) {
+    return;
+  }
+  event.preventDefault();
+  list.classList.add("is-drop-target");
+  event.dataTransfer.dropEffect = "move";
+};
+
+const handleDragLeave = (event) => {
+  const list = event.target.closest(".subcategory-list");
+  if (list) {
+    list.classList.remove("is-drop-target");
+  }
+};
+
+const handleDrop = (event) => {
+  const list = event.target.closest(".subcategory-list");
+  if (!list) {
+    return;
+  }
+  event.preventDefault();
+  list.classList.remove("is-drop-target");
+  const payload = event.dataTransfer.getData("text/plain");
+  if (!payload) {
+    return;
+  }
+  const { category, subcategory } = JSON.parse(payload);
+  const targetCategory = list.dataset.dropzone;
+  if (category && subcategory && targetCategory) {
+    moveSubcategory(category, subcategory, targetCategory);
+  }
 };
 
 const render = () => {
@@ -665,6 +742,12 @@ navLinks.forEach((link) => {
 layoutButtons.forEach((button) => {
   button.addEventListener("click", () => setLayout(button.dataset.layout));
 });
+
+categoryManager.addEventListener("dragstart", handleDragStart);
+categoryManager.addEventListener("dragend", handleDragEnd);
+categoryManager.addEventListener("dragover", handleDragOver);
+categoryManager.addEventListener("dragleave", handleDragLeave);
+categoryManager.addEventListener("drop", handleDrop);
 
 tableBody.addEventListener("click", (event) => {
   const target = event.target;
