@@ -42,6 +42,7 @@
           <p class="subtitle">Быстрый учет финансов с диаграммами и категориями.</p>
         </div>
         <div class="actions">
+          <button id="undoAction" class="button secondary">Отменить</button>
           <button id="exportCsv" class="button secondary">Экспорт CSV</button>
           <button id="clearAll" class="button danger">Очистить все</button>
         </div>
@@ -76,8 +77,11 @@
                 <div id="incomeCategoryChart" class="chart"></div>
               </div>
               <div class="chart-card">
-                <h3>Подкатегории (расходы)</h3>
-                <div id="expenseSubcategoryChart" class="chart"></div>
+                <div class="chart-title">
+                  <h3>Подкатегории (расходы)</h3>
+                  <button id="toggleSubcategoryChart" class="chip">Показать все</button>
+                </div>
+                <div id="expenseSubcategoryChart" class="chart chart-scroll"></div>
               </div>
             </div>
           </section>
@@ -92,6 +96,17 @@
               <div class="chart-card">
                 <h3>Структура доходов</h3>
                 <div id="incomePie" class="chart"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Динамика по дням</h2>
+            <div class="line-chart">
+              <svg id="dailyLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов"></svg>
+              <div class="line-legend">
+                <span><i class="legend-dot income"></i>Доходы</span>
+                <span><i class="legend-dot expense"></i>Расходы</span>
               </div>
             </div>
           </section>
@@ -118,7 +133,7 @@
               </label>
               <label>
                 Подкатегория
-                <select id="subcategory" required></select>
+                <select id="subcategory"></select>
               </label>
               <label>
                 Сумма
@@ -159,34 +174,27 @@
             <h2>Категории</h2>
             <div class="category-layout">
               <div class="category-panel">
-                <h3>Новая категория</h3>
+                <h3>Добавить категорию или подкатегорию</h3>
                 <div class="form two-columns">
                   <label>
-                    Название
-                    <input type="text" id="newCategory" placeholder="Например, Еда" />
+                    Категория
+                    <input type="text" id="newCategory" placeholder="Например, Еда" list="categoryList" />
+                    <datalist id="categoryList"></datalist>
                   </label>
                   <label>
-                    Первая подкатегория
+                    Тип категории
+                    <select id="categoryType">
+                      <option value="expense">Расход</option>
+                      <option value="income">Доход</option>
+                    </select>
+                  </label>
+                  <label>
+                    Подкатегория (опционально)
                     <input type="text" id="newSubcategory" placeholder="Например, Еда вне дома" />
                   </label>
-                  <button id="addCategory" class="button secondary" type="button">Добавить категорию</button>
+                  <button id="addCategory" class="button secondary" type="button">Добавить</button>
                 </div>
-                <p class="hint">Если подкатегория не указана, добавится «Без подкатегории».</p>
-              </div>
-
-              <div class="category-panel">
-                <h3>Добавить подкатегорию</h3>
-                <div class="form two-columns">
-                  <label>
-                    Для категории
-                    <select id="categoryForSub"></select>
-                  </label>
-                  <label>
-                    Название подкатегории
-                    <input type="text" id="newSubcategoryForCategory" placeholder="Например, Продукты" />
-                  </label>
-                  <button id="addSubcategory" class="button secondary" type="button">Добавить подкатегорию</button>
-                </div>
+                <p class="hint">Если категория уже существует, будет добавлена подкатегория. Тип учитывается только при создании новой категории.</p>
               </div>
             </div>
           </section>
@@ -196,6 +204,11 @@
               <div>
                 <h2>Управление категориями</h2>
                 <p class="hint">Перетаскивайте подкатегории и категории между карточками.</p>
+              </div>
+              <div class="filter-tabs">
+                <button class="chip is-active" data-filter="all">Все</button>
+                <button class="chip" data-filter="expense">Расходы</button>
+                <button class="chip" data-filter="income">Доходы</button>
               </div>
             </div>
             <div class="category-dropzone" data-dropzone-root>

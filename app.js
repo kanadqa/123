@@ -5,31 +5,33 @@ const totalExpenseEl = document.getElementById("totalExpense");
 const balanceEl = document.getElementById("balance");
 const exportButton = document.getElementById("exportCsv");
 const clearButton = document.getElementById("clearAll");
+const undoButton = document.getElementById("undoAction");
 const categorySelect = document.getElementById("category");
 const subcategorySelect = document.getElementById("subcategory");
-const categoryForSubSelect = document.getElementById("categoryForSub");
+const categoryTypeSelect = document.getElementById("categoryType");
+const categoryList = document.getElementById("categoryList");
 const addCategoryButton = document.getElementById("addCategory");
-const addSubcategoryButton = document.getElementById("addSubcategory");
 const newCategoryInput = document.getElementById("newCategory");
 const newSubcategoryInput = document.getElementById("newSubcategory");
-const newSubcategoryForCategoryInput = document.getElementById("newSubcategoryForCategory");
 const expenseCategoryChart = document.getElementById("expenseCategoryChart");
 const incomeCategoryChart = document.getElementById("incomeCategoryChart");
 const expenseSubcategoryChart = document.getElementById("expenseSubcategoryChart");
+const toggleSubcategoryButton = document.getElementById("toggleSubcategoryChart");
 const expensePie = document.getElementById("expensePie");
 const incomePie = document.getElementById("incomePie");
+const dailyLineChart = document.getElementById("dailyLineChart");
 const categoryManager = document.getElementById("categoryManager");
 const rootDropzone = document.querySelector("[data-dropzone-root]");
+const filterTabs = document.querySelectorAll("[data-filter]");
 const navLinks = document.querySelectorAll("[data-view-target]");
 const views = document.querySelectorAll("[data-view]");
 const viewTitle = document.getElementById("viewTitle");
 const layoutButtons = document.querySelectorAll("[data-layout]");
 
 const STORAGE_KEY = "budget.transactions.v2";
-const CATEGORY_KEY = "budget.categories.v2";
+const CATEGORY_KEY = "budget.categories.v3";
 const VIEW_KEY = "budget.view.active";
 const LAYOUT_KEY = "budget.layout";
-const DEFAULT_SUBCATEGORY = "Без подкатегории";
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -62,19 +64,38 @@ const loadTransactions = () => {
   }
 };
 
+const normalizeCategories = (raw) => {
+  if (!raw) {
+    return null;
+  }
+
+  if (Object.values(raw).every((value) => Array.isArray(value))) {
+    const converted = {};
+    Object.entries(raw).forEach(([name, subs]) => {
+      converted[name] = {
+        type: name === "Доход" ? "income" : "expense",
+        subs: subs,
+      };
+    });
+    return converted;
+  }
+
+  return raw;
+};
+
 const loadCategories = () => {
   try {
     const raw = localStorage.getItem(CATEGORY_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      return normalizeCategories(JSON.parse(raw));
     }
   } catch (error) {
     console.error("Не удалось загрузить категории", error);
   }
   return {
-    Еда: ["Еда домой", "Еда вне дома"],
-    Транспорт: ["Метро", "Такси"],
-    Доход: ["Зарплата", "Фриланс"],
+    Еда: { type: "expense", subs: ["Еда домой", "Еда вне дома"] },
+    Транспорт: { type: "expense", subs: ["Метро", "Такси"] },
+    Доход: { type: "income", subs: ["Зарплата", "Фриланс"] },
   };
 };
 
@@ -84,6 +105,38 @@ const saveCategories = (nextCategories) => {
 
 let transactions = loadTransactions();
 let categories = loadCategories();
+let historyStack = [];
+let showAllSubcategories = false;
+let categoryFilter = "all";
+
+const pushHistory = () => {
+  historyStack.push({
+    transactions: JSON.parse(JSON.stringify(transactions)),
+    categories: JSON.parse(JSON.stringify(categories)),
+  });
+  if (historyStack.length > 20) {
+    historyStack.shift();
+  }
+  updateUndoState();
+};
+
+const undoLastAction = () => {
+  const previous = historyStack.pop();
+  if (!previous) {
+    return;
+  }
+  transactions = previous.transactions;
+  categories = previous.categories;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  saveCategories(categories);
+  renderCategories();
+  render();
+  updateUndoState();
+};
+
+const updateUndoState = () => {
+  undoButton.disabled = historyStack.length === 0;
+};
 
 const updateSummary = () => {
   const totals = transactions.reduce(
@@ -126,7 +179,7 @@ const renderTable = () => {
         <td>${item.date}</td>
         <td><span class="tag ${item.type}">${formatType(item.type)}</span></td>
         <td>${item.category}</td>
-        <td>${item.subcategory}</td>
+        <td>${item.subcategory || "—"}</td>
         <td>${currencyFormatter.format(item.amount)}</td>
         <td>${item.note || "—"}</td>
         <td><button class="button secondary" data-index="${index}">Удалить</button></td>
@@ -147,9 +200,9 @@ const buildTotals = (filterType) => {
     );
 };
 
-const buildSubTotals = (filterType) => {
+const buildSubTotals = () => {
   return transactions
-    .filter((item) => (filterType ? item.type === filterType : true))
+    .filter((item) => item.type === "expense" && item.subcategory)
     .reduce(
       (acc, item) => {
         const key = `${item.category} · ${item.subcategory}`;
@@ -160,7 +213,7 @@ const buildSubTotals = (filterType) => {
     );
 };
 
-const renderChart = (container, totals, emptyText) => {
+const renderChart = (container, totals, emptyText, options = {}) => {
   container.innerHTML = "";
   const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
 
@@ -172,8 +225,9 @@ const renderChart = (container, totals, emptyText) => {
     return;
   }
 
-  const maxValue = entries[0][1];
-  entries.forEach(([label, value], index) => {
+  const visibleEntries = options.limit ? entries.slice(0, options.limit) : entries;
+  const maxValue = visibleEntries[0][1];
+  visibleEntries.forEach(([label, value], index) => {
     const row = document.createElement("div");
     row.className = "chart-row";
 
@@ -206,6 +260,13 @@ const renderChart = (container, totals, emptyText) => {
     row.appendChild(amount);
     container.appendChild(row);
   });
+
+  if (options.limit && entries.length > options.limit) {
+    const note = document.createElement("p");
+    note.className = "hint";
+    note.textContent = `Показано ${options.limit} из ${entries.length}.`;
+    container.appendChild(note);
+  }
 };
 
 const buildPie = (totals) => {
@@ -281,6 +342,72 @@ const renderPie = (container, totals, emptyText) => {
   container.appendChild(chart);
 };
 
+const renderLineChart = () => {
+  dailyLineChart.innerHTML = "";
+  const dataMap = {};
+  transactions.forEach((item) => {
+    const key = item.date;
+    if (!dataMap[key]) {
+      dataMap[key] = { income: 0, expense: 0 };
+    }
+    dataMap[key][item.type] += item.amount;
+  });
+
+  const dates = Object.keys(dataMap).sort();
+  if (dates.length === 0) {
+    dailyLineChart.innerHTML = "<text x='50%' y='50%' text-anchor='middle' fill='#94a3b8'>Нет данных</text>";
+    return;
+  }
+
+  const series = dates.map((date) => dataMap[date]);
+  const maxValue = Math.max(
+    ...series.map((item) => Math.max(item.income, item.expense, 0))
+  );
+
+  const width = 700;
+  const height = 200;
+  const padding = 32;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+
+  const scaleX = (index) =>
+    padding + (chartWidth * index) / Math.max(dates.length - 1, 1);
+  const scaleY = (value) => padding + chartHeight - (value / maxValue) * chartHeight;
+
+  const drawLine = (values, color) => {
+    const points = values
+      .map((value, index) => `${scaleX(index)},${scaleY(value)}`)
+      .join(" ");
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    line.setAttribute("points", points);
+    line.setAttribute("fill", "none");
+    line.setAttribute("stroke", color);
+    line.setAttribute("stroke-width", "3");
+    line.setAttribute("stroke-linecap", "round");
+    return line;
+  };
+
+  const grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  for (let i = 0; i <= 4; i += 1) {
+    const y = padding + (chartHeight * i) / 4;
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", padding);
+    line.setAttribute("x2", width - padding);
+    line.setAttribute("y1", y);
+    line.setAttribute("y2", y);
+    line.setAttribute("stroke", "#e2e8f0");
+    line.setAttribute("stroke-dasharray", "4 4");
+    grid.appendChild(line);
+  }
+
+  const incomeLine = drawLine(series.map((item) => item.income), "#16a34a");
+  const expenseLine = drawLine(series.map((item) => item.expense), "#ea580c");
+
+  dailyLineChart.appendChild(grid);
+  dailyLineChart.appendChild(incomeLine);
+  dailyLineChart.appendChild(expenseLine);
+};
+
 const renderCharts = () => {
   renderChart(
     expenseCategoryChart,
@@ -294,8 +421,9 @@ const renderCharts = () => {
   );
   renderChart(
     expenseSubcategoryChart,
-    buildSubTotals("expense"),
-    "Добавьте расходы с подкатегориями, чтобы увидеть детализацию."
+    buildSubTotals(),
+    "Добавьте расходы с подкатегориями, чтобы увидеть детализацию.",
+    { limit: showAllSubcategories ? null : 6 }
   );
   renderPie(
     expensePie,
@@ -307,42 +435,53 @@ const renderCharts = () => {
     buildTotals("income"),
     "Добавьте доходы, чтобы увидеть диаграмму."
   );
+  renderLineChart();
 };
 
-const ensureDefaultSubcategory = (list) => {
-  if (list.length === 0) {
-    list.push(DEFAULT_SUBCATEGORY);
-  }
-  return list;
-};
+const getCategoryNames = (type) =>
+  Object.keys(categories).filter((name) => (type ? categories[name].type === type : true));
 
-const renderCategories = () => {
-  const categoryNames = Object.keys(categories).sort();
+const renderCategoryOptions = () => {
+  const activeType = document.getElementById("type").value;
+  const options = getCategoryNames(activeType).sort();
 
   categorySelect.innerHTML = "";
-  categoryForSubSelect.innerHTML = "";
+  categoryList.innerHTML = "";
 
-  categoryNames.forEach((name) => {
+  options.forEach((name) => {
     const option = document.createElement("option");
     option.value = name;
     option.textContent = name;
     categorySelect.appendChild(option);
 
-    const optionForSub = document.createElement("option");
-    optionForSub.value = name;
-    optionForSub.textContent = name;
-    categoryForSubSelect.appendChild(optionForSub);
+    const listOption = document.createElement("option");
+    listOption.value = name;
+    categoryList.appendChild(listOption);
   });
 
-  const selectedCategory = categorySelect.value || categoryNames[0];
-  updateSubcategoryOptions(selectedCategory);
+  if (!categorySelect.value && options.length > 0) {
+    categorySelect.value = options[0];
+  }
+  updateSubcategoryOptions(categorySelect.value);
+};
+
+const renderCategories = () => {
+  renderCategoryOptions();
   renderCategoryManager();
 };
 
 const updateSubcategoryOptions = (categoryName) => {
   subcategorySelect.innerHTML = "";
-  const subs = ensureDefaultSubcategory(categories[categoryName] || []);
-  categories[categoryName] = subs;
+  if (!categoryName || !categories[categoryName]) {
+    subcategorySelect.disabled = true;
+    return;
+  }
+  const subs = categories[categoryName].subs || [];
+  if (subs.length === 0) {
+    subcategorySelect.disabled = true;
+    return;
+  }
+  subcategorySelect.disabled = false;
   subs.forEach((sub) => {
     const option = document.createElement("option");
     option.value = sub;
@@ -353,47 +492,38 @@ const updateSubcategoryOptions = (categoryName) => {
 
 const addCategory = () => {
   const name = newCategoryInput.value.trim();
+  const subName = newSubcategoryInput.value.trim();
   if (!name) {
     return;
   }
-  if (!categories[name]) {
-    const firstSubcategory = newSubcategoryInput.value.trim() || DEFAULT_SUBCATEGORY;
-    categories[name] = [firstSubcategory];
-    saveCategories(categories);
-    renderCategories();
-    categorySelect.value = name;
-    updateSubcategoryOptions(name);
+
+  pushHistory();
+
+  if (categories[name]) {
+    if (subName && !categories[name].subs.includes(subName)) {
+      categories[name].subs.push(subName);
+    }
+  } else {
+    categories[name] = {
+      type: categoryTypeSelect.value,
+      subs: subName ? [subName] : [],
+    };
   }
+
+  saveCategories(categories);
+  renderCategories();
   newCategoryInput.value = "";
   newSubcategoryInput.value = "";
-};
-
-const addSubcategory = () => {
-  const categoryName = categoryForSubSelect.value;
-  const subName = newSubcategoryForCategoryInput.value.trim();
-  if (!categoryName || !subName) {
-    return;
-  }
-  if (!categories[categoryName]) {
-    categories[categoryName] = [DEFAULT_SUBCATEGORY];
-  }
-  if (!categories[categoryName].includes(subName)) {
-    categories[categoryName].push(subName);
-    saveCategories(categories);
-    renderCategories();
-    categorySelect.value = categoryName;
-    updateSubcategoryOptions(categoryName);
-  }
-  newSubcategoryForCategoryInput.value = "";
 };
 
 const renameCategory = (oldName, newName) => {
   if (!newName || oldName === newName || categories[newName]) {
     return;
   }
-  const subs = categories[oldName];
+  pushHistory();
+  const payload = categories[oldName];
   delete categories[oldName];
-  categories[newName] = subs;
+  categories[newName] = payload;
   transactions = transactions.map((item) =>
     item.category === oldName ? { ...item, category: newName } : item
   );
@@ -406,7 +536,8 @@ const renameSubcategory = (categoryName, oldName, newName) => {
   if (!newName || oldName === newName) {
     return;
   }
-  categories[categoryName] = categories[categoryName].map((item) =>
+  pushHistory();
+  categories[categoryName].subs = categories[categoryName].subs.map((item) =>
     item === oldName ? newName : item
   );
   transactions = transactions.map((item) =>
@@ -423,10 +554,12 @@ const moveSubcategory = (fromCategory, subName, toCategory) => {
   if (fromCategory === toCategory) {
     return;
   }
-  categories[fromCategory] = categories[fromCategory].filter((item) => item !== subName);
-  ensureDefaultSubcategory(categories[fromCategory]);
-  if (!categories[toCategory].includes(subName)) {
-    categories[toCategory].push(subName);
+  pushHistory();
+  categories[fromCategory].subs = categories[fromCategory].subs.filter(
+    (item) => item !== subName
+  );
+  if (!categories[toCategory].subs.includes(subName)) {
+    categories[toCategory].subs.push(subName);
   }
   transactions = transactions.map((item) =>
     item.category === fromCategory && item.subcategory === subName
@@ -442,18 +575,18 @@ const moveCategoryToCategory = (fromCategory, toCategory) => {
   if (fromCategory === toCategory) {
     return;
   }
-  const fromSubs = categories[fromCategory] || [];
-  const toSubs = categories[toCategory] || [];
+  pushHistory();
+  const fromSubs = categories[fromCategory].subs || [];
+  const toSubs = categories[toCategory].subs || [];
   const merged = [...new Set([...toSubs, fromCategory, ...fromSubs])];
-  categories[toCategory] = merged;
+  categories[toCategory].subs = merged;
   delete categories[fromCategory];
 
   transactions = transactions.map((item) => {
     if (item.category !== fromCategory) {
       return item;
     }
-    const nextSubcategory =
-      item.subcategory === DEFAULT_SUBCATEGORY ? fromCategory : item.subcategory;
+    const nextSubcategory = item.subcategory || fromCategory;
     return { ...item, category: toCategory, subcategory: nextSubcategory };
   });
 
@@ -466,13 +599,15 @@ const promoteSubcategoryToCategory = (fromCategory, subName) => {
   if (categories[subName]) {
     return;
   }
-  categories[fromCategory] = categories[fromCategory].filter((item) => item !== subName);
-  ensureDefaultSubcategory(categories[fromCategory]);
-  categories[subName] = [DEFAULT_SUBCATEGORY];
+  pushHistory();
+  categories[fromCategory].subs = categories[fromCategory].subs.filter(
+    (item) => item !== subName
+  );
+  categories[subName] = { type: categories[fromCategory].type, subs: [] };
 
   transactions = transactions.map((item) =>
     item.category === fromCategory && item.subcategory === subName
-      ? { ...item, category: subName, subcategory: DEFAULT_SUBCATEGORY }
+      ? { ...item, category: subName, subcategory: "" }
       : item
   );
 
@@ -482,14 +617,13 @@ const promoteSubcategoryToCategory = (fromCategory, subName) => {
 };
 
 const deleteSubcategory = (categoryName, subName) => {
-  if (subName === DEFAULT_SUBCATEGORY) {
-    return;
-  }
-  categories[categoryName] = categories[categoryName].filter((item) => item !== subName);
-  ensureDefaultSubcategory(categories[categoryName]);
+  pushHistory();
+  categories[categoryName].subs = categories[categoryName].subs.filter(
+    (item) => item !== subName
+  );
   transactions = transactions.map((item) =>
     item.category === categoryName && item.subcategory === subName
-      ? { ...item, subcategory: DEFAULT_SUBCATEGORY }
+      ? { ...item, subcategory: "" }
       : item
   );
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
@@ -503,12 +637,11 @@ const deleteCategory = (categoryName) => {
     alert("Нужна хотя бы одна категория.");
     return;
   }
+  pushHistory();
   delete categories[categoryName];
   const fallback = remaining[0];
   transactions = transactions.map((item) =>
-    item.category === categoryName
-      ? { ...item, category: fallback, subcategory: DEFAULT_SUBCATEGORY }
-      : item
+    item.category === categoryName ? { ...item, category: fallback, subcategory: "" } : item
   );
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
@@ -517,9 +650,14 @@ const deleteCategory = (categoryName) => {
 
 const renderCategoryManager = () => {
   categoryManager.innerHTML = "";
-  const sorted = Object.entries(categories).sort(([a], [b]) => a.localeCompare(b));
+  const sorted = Object.entries(categories)
+    .filter(([name]) =>
+      categoryFilter === "all" ? true : categories[name].type === categoryFilter
+    )
+    .sort(([a], [b]) => a.localeCompare(b));
 
-  sorted.forEach(([categoryName, subs]) => {
+  sorted.forEach(([categoryName, payload]) => {
+    const subs = payload.subs || [];
     const card = document.createElement("div");
     card.className = "category-card";
     card.dataset.category = categoryName;
@@ -530,6 +668,10 @@ const renderCategoryManager = () => {
 
     const title = document.createElement("div");
     title.innerHTML = `<strong>${categoryName}</strong><span>${subs.length} подкатегорий</span>`;
+
+    const badge = document.createElement("span");
+    badge.className = `type-badge ${payload.type}`;
+    badge.textContent = payload.type === "income" ? "Доход" : "Расход";
 
     const actions = document.createElement("div");
     actions.className = "category-actions";
@@ -556,22 +698,26 @@ const renderCategoryManager = () => {
     actions.appendChild(renameBtn);
     actions.appendChild(deleteBtn);
     header.appendChild(title);
+    header.appendChild(badge);
     header.appendChild(actions);
 
     const list = document.createElement("div");
     list.className = "subcategory-list";
     list.dataset.dropzone = categoryName;
 
+    if (subs.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "hint";
+      empty.textContent = "Нет подкатегорий";
+      list.appendChild(empty);
+    }
+
     subs.forEach((sub) => {
       const row = document.createElement("div");
       row.className = "subcategory-row";
-      row.draggable = sub !== DEFAULT_SUBCATEGORY;
+      row.draggable = true;
       row.dataset.category = categoryName;
       row.dataset.subcategory = sub;
-
-      if (sub === DEFAULT_SUBCATEGORY) {
-        row.classList.add("is-disabled");
-      }
 
       const name = document.createElement("span");
       name.textContent = sub;
@@ -592,7 +738,6 @@ const renderCategoryManager = () => {
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "chip danger";
       deleteBtn.textContent = "Удалить";
-      deleteBtn.disabled = sub === DEFAULT_SUBCATEGORY;
       deleteBtn.addEventListener("click", () => {
         if (confirm(`Удалить подкатегорию «${sub}»?`)) {
           deleteSubcategory(categoryName, sub);
@@ -616,7 +761,7 @@ const renderCategoryManager = () => {
 const handleDragStart = (event) => {
   const subRow = event.target.closest(".subcategory-row");
   const card = event.target.closest(".category-card");
-  if (subRow && !subRow.classList.contains("is-disabled")) {
+  if (subRow) {
     event.dataTransfer.setData(
       "text/plain",
       JSON.stringify({
@@ -716,7 +861,8 @@ const render = () => {
 };
 
 const resetForm = () => {
-  form.reset();
+  document.getElementById("amount").value = "";
+  document.getElementById("note").value = "";
   document.getElementById("date").valueAsDate = new Date();
 };
 
@@ -748,7 +894,7 @@ form.addEventListener("submit", (event) => {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const category = categorySelect.value;
-  const subcategory = subcategorySelect.value || DEFAULT_SUBCATEGORY;
+  const subcategory = subcategorySelect.value || "";
   const amount = Number.parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value.trim();
 
@@ -756,10 +902,15 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
+  pushHistory();
   transactions.push({ date, type, category, subcategory, amount, note });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
   render();
   resetForm();
+});
+
+document.getElementById("type").addEventListener("change", () => {
+  renderCategoryOptions();
 });
 
 categorySelect.addEventListener("change", (event) => {
@@ -767,7 +918,6 @@ categorySelect.addEventListener("change", (event) => {
 });
 
 addCategoryButton.addEventListener("click", addCategory);
-addSubcategoryButton.addEventListener("click", addSubcategory);
 
 newCategoryInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -783,19 +933,21 @@ newSubcategoryInput.addEventListener("keydown", (event) => {
   }
 });
 
-newSubcategoryForCategoryInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    addSubcategory();
-  }
-});
-
 navLinks.forEach((link) => {
   link.addEventListener("click", () => setView(link.dataset.viewTarget));
 });
 
 layoutButtons.forEach((button) => {
   button.addEventListener("click", () => setLayout(button.dataset.layout));
+});
+
+filterTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    filterTabs.forEach((item) => item.classList.remove("is-active"));
+    tab.classList.add("is-active");
+    categoryFilter = tab.dataset.filter;
+    renderCategoryManager();
+  });
 });
 
 categoryManager.addEventListener("dragstart", handleDragStart);
@@ -808,6 +960,8 @@ rootDropzone.addEventListener("dragleave", handleDragLeave);
 rootDropzone.addEventListener("drop", handleDrop);
 rootDropzone.addEventListener("dragend", handleDragEnd);
 
+undoButton.addEventListener("click", undoLastAction);
+
 tableBody.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLButtonElement)) {
@@ -819,6 +973,7 @@ tableBody.addEventListener("click", (event) => {
     return;
   }
 
+  pushHistory();
   transactions.splice(index, 1);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
   render();
@@ -861,13 +1016,21 @@ clearButton.addEventListener("click", () => {
   if (!confirm("Удалить все операции?")) {
     return;
   }
+  pushHistory();
   transactions = [];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
   render();
 });
 
+toggleSubcategoryButton.addEventListener("click", () => {
+  showAllSubcategories = !showAllSubcategories;
+  toggleSubcategoryButton.textContent = showAllSubcategories ? "Скрыть" : "Показать все";
+  renderCharts();
+});
+
 renderCategories();
 resetForm();
 render();
+updateUndoState();
 setView(localStorage.getItem(VIEW_KEY) || "dashboard");
 setLayout(localStorage.getItem(LAYOUT_KEY) || "comfort");
