@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Учет расходов и доходов</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="light" data-density="comfortable">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">₽</div>
+      <div>
+        <h1>Финансовый контроль</h1>
+        <p>Профессиональный учет расходов и доходов с аналитикой.</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="exportCsv" class="button ghost">Экспорт CSV</button>
+      <button id="clearAll" class="button danger">Очистить все</button>
+    </div>
+  </header>
+
+  <div class="app">
+    <nav class="sidebar">
+      <button class="nav-item active" data-target="dashboard">Обзор</button>
+      <button class="nav-item" data-target="transactions">Операции</button>
+      <button class="nav-item" data-target="categories">Категории</button>
+      <button class="nav-item" data-target="charts">Диаграммы</button>
+      <button class="nav-item" data-target="settings">Настройки</button>
+    </nav>
+
+    <main class="content">
+      <section class="view" data-view="dashboard">
+        <div class="summary">
+          <div class="summary-card income">
+            <span>Доходы</span>
+            <strong id="totalIncome">0 ₽</strong>
+          </div>
+          <div class="summary-card expense">
+            <span>Расходы</span>
+            <strong id="totalExpense">0 ₽</strong>
+          </div>
+          <div class="summary-card balance">
+            <span>Баланс</span>
+            <strong id="balance">0 ₽</strong>
+          </div>
+        </div>
+
+        <section class="card">
+          <h2>Последние операции</h2>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Тип</th>
+                  <th>Категория</th>
+                  <th>Подкатегория</th>
+                  <th>Сумма</th>
+                </tr>
+              </thead>
+              <tbody id="recentTable"></tbody>
+            </table>
+          </div>
+          <p class="hint">Показываются последние 5 операций.</p>
+        </section>
+      </section>
+
+      <section class="view" data-view="transactions" hidden>
+        <section class="card">
+          <h2>Добавить операцию</h2>
+          <form id="transactionForm" class="form">
+            <label>
+              Дата
+              <input type="date" id="date" required />
+            </label>
+            <label>
+              Тип
+              <select id="type" required>
+                <option value="income">Доход</option>
+                <option value="expense">Расход</option>
+              </select>
+            </label>
+            <label>
+              Категория
+              <select id="category" required></select>
+            </label>
+            <label>
+              Подкатегория
+              <select id="subcategory" required></select>
+            </label>
+            <label>
+              Сумма
+              <input type="number" id="amount" min="0" step="0.01" required />
+            </label>
+            <label class="full">
+              Комментарий
+              <input type="text" id="note" placeholder="Опционально" />
+            </label>
+            <button type="submit" class="button primary">Сохранить</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>История операций</h2>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Тип</th>
+                  <th>Категория</th>
+                  <th>Подкатегория</th>
+                  <th>Сумма</th>
+                  <th>Комментарий</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="transactionTable"></tbody>
+            </table>
+          </div>
+          <p class="hint">Данные сохраняются в локальном хранилище браузера. Для переноса используйте экспорт CSV.</p>
+        </section>
+      </section>
+
+      <section class="view" data-view="categories" hidden>
+        <section class="card">
+          <h2>Управление категориями</h2>
+          <div class="form two-columns">
+            <label>
+              Тип категории
+              <select id="categoryType">
+                <option value="expense">Расход</option>
+                <option value="income">Доход</option>
+              </select>
+            </label>
+            <label>
+              Новая категория
+              <input type="text" id="newCategory" placeholder="Например, Еда" />
+            </label>
+            <label>
+              Подкатегория
+              <input type="text" id="newSubcategory" placeholder="Например, Еда вне дома" />
+            </label>
+            <label>
+              Для категории
+              <select id="categoryForSub"></select>
+            </label>
+            <button id="addCategory" class="button secondary" type="button">Добавить категорию</button>
+            <button id="addSubcategory" class="button secondary" type="button">Добавить подкатегорию</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Список категорий</h2>
+          <div class="category-grid">
+            <div>
+              <h3>Расходы</h3>
+              <ul id="expenseCategoryList" class="category-list"></ul>
+            </div>
+            <div>
+              <h3>Доходы</h3>
+              <ul id="incomeCategoryList" class="category-list"></ul>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" data-view="charts" hidden>
+        <section class="card">
+          <h2>Диаграммы</h2>
+          <div class="charts">
+            <div class="chart-card">
+              <h3>Расходы по категориям</h3>
+              <div id="expenseCategoryChart" class="chart"></div>
+            </div>
+            <div class="chart-card">
+              <h3>Доходы по категориям</h3>
+              <div id="incomeCategoryChart" class="chart"></div>
+            </div>
+            <div class="chart-card">
+              <h3>Подкатегории (расходы)</h3>
+              <div id="expenseSubcategoryChart" class="chart"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" data-view="settings" hidden>
+        <section class="card">
+          <h2>Настройки интерфейса</h2>
+          <div class="form two-columns">
+            <label>
+              Вариант оформления
+              <select id="themeSelect">
+                <option value="light">Светлый</option>
+                <option value="midnight">Темный</option>
+                <option value="soft">Мягкий</option>
+              </select>
+            </label>
+            <label>
+              Плотность интерфейса
+              <select id="densitySelect">
+                <option value="comfortable">Комфортная</option>
+                <option value="compact">Компактная</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint">Выберите вариант оформления — это готовые дизайны, чтобы подобрать лучший под ваш вкус.</p>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>Шаблон CSV для Excel: <a href="template.csv" download>скачать</a>.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
