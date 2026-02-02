@@ -69,12 +69,15 @@
             <h2>Диаграммы</h2>
             <div class="charts">
               <div class="chart-card">
-                <h3>Расходы по категориям</h3>
-                <div id="expenseCategoryChart" class="chart"></div>
+                <h3>Доходы по подкатегориям</h3>
+                <div id="incomeSubcategoryChart" class="chart"></div>
               </div>
               <div class="chart-card">
-                <h3>Доходы по категориям</h3>
-                <div id="incomeCategoryChart" class="chart"></div>
+                <div class="chart-title">
+                  <h3>Расходы по категориям</h3>
+                  <button id="toggleExpenseCategoryChart" class="chip">Показать все</button>
+                </div>
+                <div id="expenseCategoryChart" class="chart chart-scroll"></div>
               </div>
               <div class="chart-card">
                 <div class="chart-title">
@@ -94,19 +97,8 @@
                 <div id="expensePie" class="chart"></div>
               </div>
               <div class="chart-card">
-                <h3>Структура доходов</h3>
+                <h3>Структура доходов по подкатегориям</h3>
                 <div id="incomePie" class="chart"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="card">
-            <h2>Динамика по дням</h2>
-            <div class="line-chart">
-              <svg id="dailyLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов"></svg>
-              <div class="line-legend">
-                <span><i class="legend-dot income"></i>Доходы</span>
-                <span><i class="legend-dot expense"></i>Расходы</span>
               </div>
             </div>
           </section>
@@ -220,8 +212,25 @@
 
         <section class="view" data-view="reports">
           <section class="card">
-            <h2>Отчеты</h2>
-            <p class="hint">В этой вкладке будут расширенные отчеты. Сейчас используйте диаграммы в разделе «Обзор».</p>
+            <h2>Динамика по дням</h2>
+            <div class="line-chart">
+              <svg id="dailyLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов по дням"></svg>
+              <div class="line-legend">
+                <span><i class="legend-dot income"></i>Доходы</span>
+                <span><i class="legend-dot expense"></i>Расходы</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Динамика по месяцам</h2>
+            <div class="line-chart">
+              <svg id="monthlyLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов по месяцам"></svg>
+              <div class="line-legend">
+                <span><i class="legend-dot income"></i>Доходы</span>
+                <span><i class="legend-dot expense"></i>Расходы</span>
+              </div>
+            </div>
           </section>
         </section>
       </main>

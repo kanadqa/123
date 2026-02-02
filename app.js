@@ -14,12 +14,14 @@ const addCategoryButton = document.getElementById("addCategory");
 const newCategoryInput = document.getElementById("newCategory");
 const newSubcategoryInput = document.getElementById("newSubcategory");
 const expenseCategoryChart = document.getElementById("expenseCategoryChart");
-const incomeCategoryChart = document.getElementById("incomeCategoryChart");
+const incomeSubcategoryChart = document.getElementById("incomeSubcategoryChart");
 const expenseSubcategoryChart = document.getElementById("expenseSubcategoryChart");
 const toggleSubcategoryButton = document.getElementById("toggleSubcategoryChart");
+const toggleExpenseCategoryButton = document.getElementById("toggleExpenseCategoryChart");
 const expensePie = document.getElementById("expensePie");
 const incomePie = document.getElementById("incomePie");
 const dailyLineChart = document.getElementById("dailyLineChart");
+const monthlyLineChart = document.getElementById("monthlyLineChart");
 const categoryManager = document.getElementById("categoryManager");
 const rootDropzone = document.querySelector("[data-dropzone-root]");
 const filterTabs = document.querySelectorAll("[data-filter]");
@@ -107,6 +109,7 @@ let transactions = loadTransactions();
 let categories = loadCategories();
 let historyStack = [];
 let showAllSubcategories = false;
+let showAllExpenseCategories = false;
 let categoryFilter = "all";
 
 const pushHistory = () => {
@@ -200,9 +203,9 @@ const buildTotals = (filterType) => {
     );
 };
 
-const buildSubTotals = () => {
+const buildSubTotals = (type) => {
   return transactions
-    .filter((item) => item.type === "expense" && item.subcategory)
+    .filter((item) => item.type === type && item.subcategory)
     .reduce(
       (acc, item) => {
         const key = `${item.category} · ${item.subcategory}`;
@@ -342,27 +345,13 @@ const renderPie = (container, totals, emptyText) => {
   container.appendChild(chart);
 };
 
-const renderLineChart = () => {
-  dailyLineChart.innerHTML = "";
-  const dataMap = {};
-  transactions.forEach((item) => {
-    const key = item.date;
-    if (!dataMap[key]) {
-      dataMap[key] = { income: 0, expense: 0 };
-    }
-    dataMap[key][item.type] += item.amount;
-  });
+const renderLineChart = (target, data) => {
+  target.innerHTML = "";
 
-  const dates = Object.keys(dataMap).sort();
-  if (dates.length === 0) {
-    dailyLineChart.innerHTML = "<text x='50%' y='50%' text-anchor='middle' fill='#94a3b8'>Нет данных</text>";
+  if (data.length === 0) {
+    target.innerHTML = "<text x='50%' y='50%' text-anchor='middle' fill='#94a3b8'>Нет данных</text>";
     return;
   }
-
-  const series = dates.map((date) => dataMap[date]);
-  const maxValue = Math.max(
-    ...series.map((item) => Math.max(item.income, item.expense, 0))
-  );
 
   const width = 700;
   const height = 200;
@@ -370,8 +359,12 @@ const renderLineChart = () => {
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
 
+  const maxValue = Math.max(
+    ...data.map((item) => Math.max(item.income, item.expense, 0))
+  );
+
   const scaleX = (index) =>
-    padding + (chartWidth * index) / Math.max(dates.length - 1, 1);
+    padding + (chartWidth * index) / Math.max(data.length - 1, 1);
   const scaleY = (value) => padding + chartHeight - (value / maxValue) * chartHeight;
 
   const drawLine = (values, color) => {
@@ -400,28 +393,62 @@ const renderLineChart = () => {
     grid.appendChild(line);
   }
 
-  const incomeLine = drawLine(series.map((item) => item.income), "#16a34a");
-  const expenseLine = drawLine(series.map((item) => item.expense), "#ea580c");
+  const axis = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  const labelStep = Math.max(1, Math.floor(data.length / 6));
+  data.forEach((item, index) => {
+    if (index % labelStep !== 0 && index !== data.length - 1) {
+      return;
+    }
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", scaleX(index));
+    label.setAttribute("y", height - 8);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("fill", "#94a3b8");
+    label.setAttribute("font-size", "10");
+    label.textContent = item.label;
+    axis.appendChild(label);
+  });
 
-  dailyLineChart.appendChild(grid);
-  dailyLineChart.appendChild(incomeLine);
-  dailyLineChart.appendChild(expenseLine);
+  const incomeLine = drawLine(data.map((item) => item.income), "#16a34a");
+  const expenseLine = drawLine(data.map((item) => item.expense), "#ea580c");
+
+  target.appendChild(grid);
+  target.appendChild(axis);
+  target.appendChild(incomeLine);
+  target.appendChild(expenseLine);
+};
+
+const buildSeries = (formatter) => {
+  const dataMap = {};
+  transactions.forEach((item) => {
+    const key = formatter(item.date);
+    if (!dataMap[key]) {
+      dataMap[key] = { income: 0, expense: 0 };
+    }
+    dataMap[key][item.type] += item.amount;
+  });
+
+  return Object.keys(dataMap)
+    .sort()
+    .map((label) => ({ label, ...dataMap[label] }));
 };
 
 const renderCharts = () => {
   renderChart(
-    expenseCategoryChart,
-    buildTotals("expense"),
-    "Добавьте расходы, чтобы увидеть диаграмму."
+    incomeSubcategoryChart,
+    buildSubTotals("income"),
+    "Добавьте доходы с подкатегориями, чтобы увидеть диаграмму.",
+    { limit: 6 }
   );
   renderChart(
-    incomeCategoryChart,
-    buildTotals("income"),
-    "Добавьте доходы, чтобы увидеть диаграмму."
+    expenseCategoryChart,
+    buildTotals("expense"),
+    "Добавьте расходы, чтобы увидеть диаграмму.",
+    { limit: showAllExpenseCategories ? null : 6 }
   );
   renderChart(
     expenseSubcategoryChart,
-    buildSubTotals(),
+    buildSubTotals("expense"),
     "Добавьте расходы с подкатегориями, чтобы увидеть детализацию.",
     { limit: showAllSubcategories ? null : 6 }
   );
@@ -432,10 +459,15 @@ const renderCharts = () => {
   );
   renderPie(
     incomePie,
-    buildTotals("income"),
-    "Добавьте доходы, чтобы увидеть диаграмму."
+    buildSubTotals("income"),
+    "Добавьте доходы с подкатегориями, чтобы увидеть диаграмму."
   );
-  renderLineChart();
+
+  renderLineChart(dailyLineChart, buildSeries((date) => date));
+  renderLineChart(
+    monthlyLineChart,
+    buildSeries((date) => date.slice(0, 7))
+  );
 };
 
 const getCategoryNames = (type) =>
@@ -1025,6 +1057,12 @@ clearButton.addEventListener("click", () => {
 toggleSubcategoryButton.addEventListener("click", () => {
   showAllSubcategories = !showAllSubcategories;
   toggleSubcategoryButton.textContent = showAllSubcategories ? "Скрыть" : "Показать все";
+  renderCharts();
+});
+
+toggleExpenseCategoryButton.addEventListener("click", () => {
+  showAllExpenseCategories = !showAllExpenseCategories;
+  toggleExpenseCategoryButton.textContent = showAllExpenseCategories ? "Скрыть" : "Показать все";
   renderCharts();
 });
 
