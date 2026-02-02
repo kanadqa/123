@@ -757,6 +757,35 @@ td {
   gap: 16px;
 }
 
+.capital-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.capital-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.capital-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.capital-tab {
+  display: none;
+  gap: 16px;
+}
+
+.capital-tab.is-active {
+  display: grid;
+  gap: 16px;
+}
+
 .capital-summary {
   margin-top: 0;
 }
@@ -773,6 +802,27 @@ td {
   padding: 16px;
   display: grid;
   gap: 12px;
+}
+
+.capital-alerts {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.capital-table input,
+.capital-table select,
+.capital-card input,
+.capital-card select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
 }
 
 .compact-form {

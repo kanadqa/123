@@ -294,153 +294,370 @@
         </section>
 
         <section class="view" data-view="capital">
-          <section class="summary capital-summary">
-            <div class="summary-card income">
-              <span>Активы</span>
-              <strong id="totalAssets">0 ₽</strong>
-            </div>
-            <div class="summary-card expense">
-              <span>Долги</span>
-              <strong id="totalDebts">0 ₽</strong>
-            </div>
-            <div class="summary-card balance">
-              <span>Чистый капитал</span>
-              <strong id="netWorth">0 ₽</strong>
-            </div>
-          </section>
-
-          <section class="card capital-grid">
-            <div class="capital-card">
-              <h3>Где лежат деньги</h3>
-              <form id="assetForm" class="form compact-form">
-                <label>
-                  Место
-                  <input type="text" id="assetName" placeholder="Например, Вклад Тинькофф" required />
-                </label>
-                <label>
-                  Сумма (RUB)
-                  <input type="number" id="assetAmount" min="0" step="0.01" required />
-                </label>
-                <label class="full">
-                  Комментарий
-                  <input type="text" id="assetNote" placeholder="Опционально" />
-                </label>
-                <button type="submit" class="button primary">Добавить</button>
-              </form>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Где</th>
-                      <th>Сумма</th>
-                      <th>Комментарий</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="assetTable"></tbody>
-                </table>
+          <section class="card capital-shell">
+            <div class="capital-header">
+              <div>
+                <h2>Капитал</h2>
+                <p class="hint">Контроль активов, долгов, целей и динамики капитала в одном месте.</p>
               </div>
-            </div>
-
-            <div class="capital-card">
-              <h3>Долги</h3>
-              <form id="debtForm" class="form compact-form">
-                <label>
-                  Кому должен
-                  <input type="text" id="debtName" placeholder="Например, Кредитная карта" required />
-                </label>
-                <label>
-                  Сумма (RUB)
-                  <input type="number" id="debtAmount" min="0" step="0.01" required />
-                </label>
-                <label class="full">
-                  Комментарий
-                  <input type="text" id="debtNote" placeholder="Опционально" />
-                </label>
-                <button type="submit" class="button secondary">Добавить</button>
-              </form>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Кому</th>
-                      <th>Сумма</th>
-                      <th>Комментарий</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="debtTable"></tbody>
-                </table>
+              <div class="capital-tabs">
+                <button class="chip is-active" data-capital-tab="overview">Обзор</button>
+                <button class="chip" data-capital-tab="assets">Активы</button>
+                <button class="chip" data-capital-tab="debts">Долги</button>
+                <button class="chip" data-capital-tab="goals">Цели</button>
+                <button class="chip" data-capital-tab="history">История</button>
               </div>
             </div>
           </section>
 
-          <section class="card capital-grid">
-            <div class="capital-card">
-              <div class="chart-title">
-                <h3>Динамика капитала</h3>
-                <span class="hint">Фиксируйте общий капитал по месяцам.</span>
+          <section class="capital-tab is-active" data-capital-tab-panel="overview">
+            <section class="summary capital-summary">
+              <div class="summary-card income">
+                <span>Активы</span>
+                <strong id="capitalAssetsTotal">0 ₽</strong>
               </div>
-              <form id="capitalHistoryForm" class="form compact-form">
-                <label>
-                  Месяц
-                  <input type="month" id="capitalMonth" required />
-                </label>
-                <label>
-                  Общий капитал (RUB)
-                  <input type="number" id="capitalTotal" min="0" step="0.01" required />
-                </label>
-                <button type="submit" class="button primary">Добавить</button>
-              </form>
-              <div class="line-chart">
-                <svg id="capitalLineChart" viewBox="0 0 720 260" aria-label="График динамики капитала"></svg>
+              <div class="summary-card expense">
+                <span>Долги</span>
+                <strong id="capitalDebtsTotal">0 ₽</strong>
               </div>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Месяц</th>
-                      <th>Капитал</th>
-                      <th>Прирост</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="capitalHistoryTable"></tbody>
-                </table>
+              <div class="summary-card balance">
+                <span>Чистый капитал</span>
+                <strong id="capitalNetWorth">0 ₽</strong>
               </div>
-            </div>
+              <div class="summary-card neutral">
+                <span>Ликвидный буфер</span>
+                <strong id="capitalLiquidBuffer">0 ₽</strong>
+              </div>
+            </section>
 
-            <div class="capital-card">
-              <h3>Финансовые цели</h3>
-              <form id="goalForm" class="form compact-form">
-                <label>
-                  Год
-                  <input type="number" id="goalYear" min="2000" step="1" required />
-                </label>
-                <label>
-                  Цель (RUB)
-                  <input type="number" id="goalTarget" min="0" step="0.01" required />
-                </label>
-                <label>
-                  Факт (RUB)
-                  <input type="number" id="goalActual" min="0" step="0.01" />
-                </label>
-                <button type="submit" class="button secondary">Добавить</button>
-              </form>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Год</th>
-                      <th>Цель</th>
-                      <th>Факт</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="goalTable"></tbody>
-                </table>
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Валюта и курсы</h3>
+                <div class="form compact-form">
+                  <label>
+                    Базовая валюта
+                    <select id="capitalBaseCurrency">
+                      <option value="RUB">RUB</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </label>
+                </div>
+                <form id="capitalFxForm" class="form compact-form">
+                  <label>
+                    Валюта
+                    <input type="text" id="capitalFxCode" placeholder="USD" maxlength="3" />
+                  </label>
+                  <label>
+                    Курс к базе
+                    <input type="number" id="capitalFxRate" min="0" step="0.0001" />
+                  </label>
+                  <button type="submit" class="button secondary">Добавить курс</button>
+                </form>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Валюта</th>
+                        <th>Курс</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalFxTable"></tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+
+              <div class="capital-card">
+                <h3>Структура активов</h3>
+                <div id="capitalAssetTypeChart" class="chart"></div>
+                <p class="hint">Суммы в базовой валюте.</p>
+              </div>
+
+              <div class="capital-card">
+                <h3>Предупреждения</h3>
+                <ul id="capitalAlerts" class="capital-alerts"></ul>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="assets">
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Добавить актив</h3>
+                <form id="capitalAssetForm" class="form">
+                  <label>
+                    Название
+                    <input type="text" id="capitalAssetName" placeholder="Например, Сбер вклад" required />
+                  </label>
+                  <label>
+                    Тип
+                    <select id="capitalAssetType">
+                      <option value="cash">Наличные</option>
+                      <option value="bank">Банк</option>
+                      <option value="deposit">Вклад</option>
+                      <option value="investment">Инвестиции</option>
+                      <option value="real_estate">Недвижимость</option>
+                      <option value="other">Другое</option>
+                    </select>
+                  </label>
+                  <label>
+                    Валюта
+                    <input type="text" id="capitalAssetCurrency" value="RUB" maxlength="3" />
+                  </label>
+                  <label>
+                    Сумма
+                    <input type="number" id="capitalAssetAmount" min="0" step="0.01" required />
+                  </label>
+                  <label>
+                    Ликвидность
+                    <select id="capitalAssetLiquidity">
+                      <option value="high">Высокая</option>
+                      <option value="mid">Средняя</option>
+                      <option value="low">Низкая</option>
+                    </select>
+                  </label>
+                  <label>
+                    Институт
+                    <input type="text" id="capitalAssetInstitution" placeholder="Например, Тинькофф" />
+                  </label>
+                  <label class="full">
+                    Комментарий
+                    <input type="text" id="capitalAssetNote" placeholder="Опционально" />
+                  </label>
+                  <button type="submit" class="button primary">Добавить актив</button>
+                </form>
+              </div>
+
+              <div class="capital-card">
+                <div class="chart-title">
+                  <h3>Фильтр по ликвидности</h3>
+                  <div class="chip-group">
+                    <button class="chip is-active" data-capital-liquidity="all">Все</button>
+                    <button class="chip" data-capital-liquidity="high">Высокая</button>
+                    <button class="chip" data-capital-liquidity="mid">Средняя</button>
+                    <button class="chip" data-capital-liquidity="low">Низкая</button>
+                  </div>
+                </div>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Название</th>
+                        <th>Тип</th>
+                        <th>Валюта</th>
+                        <th>Сумма</th>
+                        <th>Ликвидность</th>
+                        <th>Институт</th>
+                        <th>Комментарий</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalAssetsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="debts">
+            <section class="summary capital-summary">
+              <div class="summary-card neutral">
+                <span>Средняя ставка</span>
+                <strong id="capitalWeightedApr">0%</strong>
+              </div>
+              <div class="summary-card expense">
+                <span>Самый дорогой долг</span>
+                <strong id="capitalHighestApr">—</strong>
+              </div>
+              <div class="summary-card balance">
+                <span>Месячные проценты</span>
+                <strong id="capitalInterestMonthly">0 ₽</strong>
+              </div>
+            </section>
+
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Добавить долг</h3>
+                <form id="capitalDebtForm" class="form">
+                  <label>
+                    Название
+                    <input type="text" id="capitalDebtName" placeholder="Например, Кредитка" required />
+                  </label>
+                  <label>
+                    Тип
+                    <select id="capitalDebtType">
+                      <option value="credit_card">Кредитная карта</option>
+                      <option value="loan">Кредит</option>
+                      <option value="mortgage">Ипотека</option>
+                      <option value="personal">Личный долг</option>
+                      <option value="other">Другое</option>
+                    </select>
+                  </label>
+                  <label>
+                    Валюта
+                    <input type="text" id="capitalDebtCurrency" value="RUB" maxlength="3" />
+                  </label>
+                  <label>
+                    Остаток
+                    <input type="number" id="capitalDebtPrincipal" min="0" step="0.01" required />
+                  </label>
+                  <label>
+                    APR (%)
+                    <input type="number" id="capitalDebtApr" min="0" step="0.01" />
+                  </label>
+                  <label>
+                    Минимальный платеж
+                    <input type="number" id="capitalDebtPayment" min="0" step="0.01" />
+                  </label>
+                  <label>
+                    День платежа
+                    <input type="number" id="capitalDebtDueDay" min="1" max="31" step="1" />
+                  </label>
+                  <label class="full">
+                    Комментарий
+                    <input type="text" id="capitalDebtNote" placeholder="Опционально" />
+                  </label>
+                  <button type="submit" class="button secondary">Добавить долг</button>
+                </form>
+              </div>
+
+              <div class="capital-card">
+                <h3>План выплат</h3>
+                <div class="form compact-form">
+                  <label>
+                    Дополнительный платеж в месяц
+                    <input type="number" id="capitalExtraPayment" min="0" step="0.01" value="0" />
+                  </label>
+                  <p class="hint">Расчет приблизительный и основан на текущих ставках.</p>
+                </div>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Стратегия</th>
+                        <th>Долг</th>
+                        <th>Месяцев</th>
+                        <th>Комментарий</th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalPayoffTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Список долгов</h3>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Название</th>
+                        <th>Тип</th>
+                        <th>Валюта</th>
+                        <th>Остаток</th>
+                        <th>APR</th>
+                        <th>Мин. платеж</th>
+                        <th>День</th>
+                        <th>Комментарий</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalDebtsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="goals">
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Добавить цель</h3>
+                <form id="capitalGoalForm" class="form">
+                  <label>
+                    Название
+                    <input type="text" id="capitalGoalName" placeholder="Например, 3 млн капитала" required />
+                  </label>
+                  <label>
+                    Тип
+                    <select id="capitalGoalKind">
+                      <option value="netWorth">Чистый капитал</option>
+                      <option value="assetBucket">Актив (по типу)</option>
+                      <option value="debtPayoff">Погасить долг</option>
+                    </select>
+                  </label>
+                  <label>
+                    Целевая сумма
+                    <input type="number" id="capitalGoalTarget" min="0" step="0.01" required />
+                  </label>
+                  <label>
+                    Целевая дата
+                    <input type="month" id="capitalGoalDate" required />
+                  </label>
+                  <label>
+                    Базовая сумма
+                    <input type="number" id="capitalGoalBaseline" min="0" step="0.01" />
+                  </label>
+                  <label class="full">
+                    Комментарий
+                    <input type="text" id="capitalGoalNote" placeholder="Опционально" />
+                  </label>
+                  <button type="submit" class="button primary">Добавить цель</button>
+                </form>
+                <p class="hint">Для целей типа «Актив» в названии укажите тип (cash, bank, deposit).</p>
+              </div>
+
+              <div class="capital-card">
+                <h3>Мои цели</h3>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Цель</th>
+                        <th>Прогресс</th>
+                        <th>Нужно в месяц</th>
+                        <th>Статус</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalGoalsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="history">
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <div class="chart-title">
+                  <h3>Снимки капитала</h3>
+                  <button id="capitalSnapshotNow" class="chip">Создать снимок месяца</button>
+                </div>
+                <div class="line-chart">
+                  <svg id="capitalSnapshotsChart" viewBox="0 0 720 260" aria-label="График капитала"></svg>
+                </div>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Месяц</th>
+                        <th>Активы</th>
+                        <th>Долги</th>
+                        <th>Капитал</th>
+                        <th>Δ</th>
+                        <th>Заметка</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalSnapshotsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
           </section>
         </section>
       </main>
