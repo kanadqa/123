@@ -93,8 +93,12 @@
             <h2>Круговые диаграммы</h2>
             <div class="charts">
               <div class="chart-card">
-                <h3>Структура расходов</h3>
+                <h3>Структура расходов по категориям</h3>
                 <div id="expensePie" class="chart"></div>
+              </div>
+              <div class="chart-card">
+                <h3>Структура расходов по подкатегориям</h3>
+                <div id="expenseSubcategoryPie" class="chart"></div>
               </div>
               <div class="chart-card">
                 <h3>Структура доходов по подкатегориям</h3>
@@ -211,25 +215,79 @@
         </section>
 
         <section class="view" data-view="reports">
-          <section class="card">
-            <h2>Динамика по дням</h2>
-            <div class="line-chart">
-              <svg id="dailyLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов по дням"></svg>
-              <div class="line-legend">
-                <span><i class="legend-dot income"></i>Доходы</span>
-                <span><i class="legend-dot expense"></i>Расходы</span>
+          <section class="card report-card">
+            <div class="report-header">
+              <div>
+                <h2>Отчетный период</h2>
+                <p class="hint">Выберите период, чтобы отчет отражал текущую динамику и структуру расходов.</p>
               </div>
+              <div class="report-quick">
+                <button class="chip is-active" data-report-range="30">30 дней</button>
+                <button class="chip" data-report-range="7">7 дней</button>
+                <button class="chip" data-report-range="90">90 дней</button>
+                <button class="chip" data-report-range="all">Все время</button>
+              </div>
+            </div>
+            <div class="report-range">
+              <label>
+                С
+                <input type="date" id="reportStart" />
+              </label>
+              <label>
+                По
+                <input type="date" id="reportEnd" />
+              </label>
+              <button id="applyReportRange" class="button secondary" type="button">Показать</button>
             </div>
           </section>
 
-          <section class="card">
-            <h2>Динамика по месяцам</h2>
-            <div class="line-chart">
-              <svg id="monthlyLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов по месяцам"></svg>
-              <div class="line-legend">
-                <span><i class="legend-dot income"></i>Доходы</span>
-                <span><i class="legend-dot expense"></i>Расходы</span>
+          <section class="summary report-summary">
+            <div class="summary-card income">
+              <span>Доходы за период</span>
+              <strong id="reportIncome">0 ₽</strong>
+            </div>
+            <div class="summary-card expense">
+              <span>Расходы за период</span>
+              <strong id="reportExpense">0 ₽</strong>
+            </div>
+            <div class="summary-card balance">
+              <span>Баланс периода</span>
+              <strong id="reportBalance">0 ₽</strong>
+            </div>
+            <div class="summary-card neutral">
+              <span>Операций</span>
+              <strong id="reportTransactionsCount">0</strong>
+            </div>
+          </section>
+
+          <section class="card report-grid">
+            <div class="report-chart-card report-span">
+              <div class="chart-title">
+                <h3>Динамика</h3>
+                <div class="chip-group">
+                  <button class="chip is-active" data-report-granularity="daily">По дням</button>
+                  <button class="chip" data-report-granularity="monthly">По месяцам</button>
+                </div>
               </div>
+              <div class="line-chart">
+                <svg id="reportLineChart" viewBox="0 0 700 240" aria-label="График доходов и расходов"></svg>
+                <div class="line-legend">
+                  <span><i class="legend-dot income"></i>Доходы</span>
+                  <span><i class="legend-dot expense"></i>Расходы</span>
+                </div>
+              </div>
+            </div>
+            <div class="report-chart-card">
+              <h3>Структура расходов по категориям</h3>
+              <div id="reportExpenseCategories" class="chart"></div>
+            </div>
+            <div class="report-chart-card">
+              <h3>Структура расходов по подкатегориям</h3>
+              <div id="reportExpenseSubcategories" class="chart"></div>
+            </div>
+            <div class="report-chart-card">
+              <h3>Структура доходов по подкатегориям</h3>
+              <div id="reportIncomeSubcategories" class="chart"></div>
             </div>
           </section>
         </section>

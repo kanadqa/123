@@ -19,9 +19,9 @@ const expenseSubcategoryChart = document.getElementById("expenseSubcategoryChart
 const toggleSubcategoryButton = document.getElementById("toggleSubcategoryChart");
 const toggleExpenseCategoryButton = document.getElementById("toggleExpenseCategoryChart");
 const expensePie = document.getElementById("expensePie");
+const expenseSubcategoryPie = document.getElementById("expenseSubcategoryPie");
 const incomePie = document.getElementById("incomePie");
-const dailyLineChart = document.getElementById("dailyLineChart");
-const monthlyLineChart = document.getElementById("monthlyLineChart");
+const reportLineChart = document.getElementById("reportLineChart");
 const categoryManager = document.getElementById("categoryManager");
 const rootDropzone = document.querySelector("[data-dropzone-root]");
 const filterTabs = document.querySelectorAll("[data-filter]");
@@ -29,11 +29,24 @@ const navLinks = document.querySelectorAll("[data-view-target]");
 const views = document.querySelectorAll("[data-view]");
 const viewTitle = document.getElementById("viewTitle");
 const layoutButtons = document.querySelectorAll("[data-layout]");
+const reportStartInput = document.getElementById("reportStart");
+const reportEndInput = document.getElementById("reportEnd");
+const applyReportRangeButton = document.getElementById("applyReportRange");
+const reportRangeButtons = document.querySelectorAll("[data-report-range]");
+const reportGranularityButtons = document.querySelectorAll("[data-report-granularity]");
+const reportIncomeEl = document.getElementById("reportIncome");
+const reportExpenseEl = document.getElementById("reportExpense");
+const reportBalanceEl = document.getElementById("reportBalance");
+const reportTransactionsCountEl = document.getElementById("reportTransactionsCount");
+const reportExpenseCategories = document.getElementById("reportExpenseCategories");
+const reportExpenseSubcategories = document.getElementById("reportExpenseSubcategories");
+const reportIncomeSubcategories = document.getElementById("reportIncomeSubcategories");
 
 const STORAGE_KEY = "budget.transactions.v2";
 const CATEGORY_KEY = "budget.categories.v3";
 const VIEW_KEY = "budget.view.active";
 const LAYOUT_KEY = "budget.layout";
+const CHART_LIMIT = 6;
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -111,6 +124,8 @@ let historyStack = [];
 let showAllSubcategories = false;
 let showAllExpenseCategories = false;
 let categoryFilter = "all";
+let reportGranularity = "daily";
+let reportRange = { start: "", end: "" };
 
 const pushHistory = () => {
   historyStack.push({
@@ -191,8 +206,8 @@ const renderTable = () => {
     });
 };
 
-const buildTotals = (filterType) => {
-  return transactions
+const buildTotals = (filterType, source = transactions) => {
+  return source
     .filter((item) => (filterType ? item.type === filterType : true))
     .reduce(
       (acc, item) => {
@@ -203,8 +218,8 @@ const buildTotals = (filterType) => {
     );
 };
 
-const buildSubTotals = (type) => {
-  return transactions
+const buildSubTotals = (type, source = transactions) => {
+  return source
     .filter((item) => item.type === type && item.subcategory)
     .reduce(
       (acc, item) => {
@@ -418,9 +433,9 @@ const renderLineChart = (target, data) => {
   target.appendChild(expenseLine);
 };
 
-const buildSeries = (formatter) => {
+const buildSeries = (formatter, source = transactions) => {
   const dataMap = {};
-  transactions.forEach((item) => {
+  source.forEach((item) => {
     const key = formatter(item.date);
     if (!dataMap[key]) {
       dataMap[key] = { income: 0, expense: 0 };
@@ -433,41 +448,72 @@ const buildSeries = (formatter) => {
     .map((label) => ({ label, ...dataMap[label] }));
 };
 
+const syncToggleButton = (button, isExpanded, canExpand) => {
+  if (!button) {
+    return;
+  }
+  if (!canExpand) {
+    button.classList.add("is-hidden");
+    button.disabled = true;
+  } else {
+    button.classList.remove("is-hidden");
+    button.disabled = false;
+  }
+  button.textContent = isExpanded ? "Скрыть" : "Показать все";
+};
+
 const renderCharts = () => {
+  const incomeSubcategoryTotals = buildSubTotals("income");
+  const expenseCategoryTotals = buildTotals("expense");
+  const expenseSubcategoryTotals = buildSubTotals("expense");
+  const canExpandExpenseCategories =
+    Object.keys(expenseCategoryTotals).length > CHART_LIMIT;
+  const canExpandExpenseSubcategories =
+    Object.keys(expenseSubcategoryTotals).length > CHART_LIMIT;
+
+  if (!canExpandExpenseCategories) {
+    showAllExpenseCategories = false;
+  }
+  if (!canExpandExpenseSubcategories) {
+    showAllSubcategories = false;
+  }
+
   renderChart(
     incomeSubcategoryChart,
-    buildSubTotals("income"),
+    incomeSubcategoryTotals,
     "Добавьте доходы с подкатегориями, чтобы увидеть диаграмму.",
-    { limit: 6 }
+    { limit: CHART_LIMIT }
   );
   renderChart(
     expenseCategoryChart,
-    buildTotals("expense"),
+    expenseCategoryTotals,
     "Добавьте расходы, чтобы увидеть диаграмму.",
-    { limit: showAllExpenseCategories ? null : 6 }
+    { limit: showAllExpenseCategories ? null : CHART_LIMIT }
   );
   renderChart(
     expenseSubcategoryChart,
-    buildSubTotals("expense"),
+    expenseSubcategoryTotals,
     "Добавьте расходы с подкатегориями, чтобы увидеть детализацию.",
-    { limit: showAllSubcategories ? null : 6 }
+    { limit: showAllSubcategories ? null : CHART_LIMIT }
   );
   renderPie(
     expensePie,
-    buildTotals("expense"),
+    expenseCategoryTotals,
     "Добавьте расходы, чтобы увидеть диаграмму."
   );
   renderPie(
+    expenseSubcategoryPie,
+    expenseSubcategoryTotals,
+    "Добавьте расходы с подкатегориями, чтобы увидеть диаграмму."
+  );
+  renderPie(
     incomePie,
-    buildSubTotals("income"),
+    incomeSubcategoryTotals,
     "Добавьте доходы с подкатегориями, чтобы увидеть диаграмму."
   );
 
-  renderLineChart(dailyLineChart, buildSeries((date) => date));
-  renderLineChart(
-    monthlyLineChart,
-    buildSeries((date) => date.slice(0, 7))
-  );
+  syncToggleButton(toggleExpenseCategoryButton, showAllExpenseCategories, canExpandExpenseCategories);
+  syncToggleButton(toggleSubcategoryButton, showAllSubcategories, canExpandExpenseSubcategories);
 };
 
 const getCategoryNames = (type) =>
@@ -478,17 +524,12 @@ const renderCategoryOptions = () => {
   const options = getCategoryNames(activeType).sort();
 
   categorySelect.innerHTML = "";
-  categoryList.innerHTML = "";
 
   options.forEach((name) => {
     const option = document.createElement("option");
     option.value = name;
     option.textContent = name;
     categorySelect.appendChild(option);
-
-    const listOption = document.createElement("option");
-    listOption.value = name;
-    categoryList.appendChild(listOption);
   });
 
   if (!categorySelect.value && options.length > 0) {
@@ -497,8 +538,20 @@ const renderCategoryOptions = () => {
   updateSubcategoryOptions(categorySelect.value);
 };
 
+const renderCategoryListOptions = () => {
+  const activeType = categoryTypeSelect.value;
+  const names = getCategoryNames(activeType).sort();
+  categoryList.innerHTML = "";
+  names.forEach((name) => {
+    const listOption = document.createElement("option");
+    listOption.value = name;
+    categoryList.appendChild(listOption);
+  });
+};
+
 const renderCategories = () => {
   renderCategoryOptions();
+  renderCategoryListOptions();
   renderCategoryManager();
 };
 
@@ -520,6 +573,92 @@ const updateSubcategoryOptions = (categoryName) => {
     option.textContent = sub;
     subcategorySelect.appendChild(option);
   });
+};
+
+const getDateBounds = (items) => {
+  if (!items.length) {
+    return { start: "", end: "" };
+  }
+  const dates = items.map((item) => item.date).sort();
+  return { start: dates[0], end: dates[dates.length - 1] };
+};
+
+const clampReportRange = (start, end) => {
+  if (!start || !end) {
+    return { start, end };
+  }
+  return start > end ? { start: end, end: start } : { start, end };
+};
+
+const setReportRange = (start, end) => {
+  const clamped = clampReportRange(start, end);
+  reportRange = clamped;
+  reportStartInput.value = clamped.start || "";
+  reportEndInput.value = clamped.end || "";
+};
+
+const filterTransactionsByRange = (items) => {
+  const { start, end } = reportRange;
+  if (!start && !end) {
+    return items;
+  }
+  return items.filter((item) => {
+    if (start && item.date < start) {
+      return false;
+    }
+    if (end && item.date > end) {
+      return false;
+    }
+    return true;
+  });
+};
+
+const renderReports = () => {
+  const filtered = filterTransactionsByRange(transactions);
+  const totals = filtered.reduce(
+    (acc, item) => {
+      if (item.type === "income") {
+        acc.income += item.amount;
+      } else {
+        acc.expense += item.amount;
+      }
+      return acc;
+    },
+    { income: 0, expense: 0 }
+  );
+
+  reportIncomeEl.textContent = currencyFormatter.format(totals.income);
+  reportExpenseEl.textContent = currencyFormatter.format(totals.expense);
+  reportBalanceEl.textContent = currencyFormatter.format(totals.income - totals.expense);
+  reportTransactionsCountEl.textContent = filtered.length;
+
+  const expenseCategoryTotals = buildTotals("expense", filtered);
+  const expenseSubcategoryTotals = buildSubTotals("expense", filtered);
+  const incomeSubcategoryTotals = buildSubTotals("income", filtered);
+
+  renderChart(
+    reportExpenseCategories,
+    expenseCategoryTotals,
+    "Нет расходов за выбранный период.",
+    { limit: 8 }
+  );
+  renderChart(
+    reportExpenseSubcategories,
+    expenseSubcategoryTotals,
+    "Нет расходов с подкатегориями за выбранный период.",
+    { limit: 8 }
+  );
+  renderChart(
+    reportIncomeSubcategories,
+    incomeSubcategoryTotals,
+    "Нет доходов с подкатегориями за выбранный период.",
+    { limit: 8 }
+  );
+
+  const seriesFormatter = reportGranularity === "monthly"
+    ? (date) => date.slice(0, 7)
+    : (date) => date;
+  renderLineChart(reportLineChart, buildSeries(seriesFormatter, filtered));
 };
 
 const addCategory = () => {
@@ -890,6 +1029,20 @@ const render = () => {
   updateSummary();
   renderTable();
   renderCharts();
+  renderReports();
+};
+
+const initializeReportRange = () => {
+  const bounds = getDateBounds(transactions);
+  if (bounds.end) {
+    const endDate = new Date(bounds.end);
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 29);
+    setReportRange(startDate.toISOString().slice(0, 10), bounds.end);
+  } else {
+    const today = new Date().toISOString().slice(0, 10);
+    setReportRange(today, today);
+  }
 };
 
 const resetForm = () => {
@@ -950,6 +1103,18 @@ categorySelect.addEventListener("change", (event) => {
 });
 
 addCategoryButton.addEventListener("click", addCategory);
+
+categoryTypeSelect.addEventListener("change", () => {
+  renderCategoryListOptions();
+});
+
+newCategoryInput.addEventListener("input", () => {
+  const name = newCategoryInput.value.trim();
+  if (categories[name]) {
+    categoryTypeSelect.value = categories[name].type;
+    renderCategoryListOptions();
+  }
+});
 
 newCategoryInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -1056,18 +1221,53 @@ clearButton.addEventListener("click", () => {
 
 toggleSubcategoryButton.addEventListener("click", () => {
   showAllSubcategories = !showAllSubcategories;
-  toggleSubcategoryButton.textContent = showAllSubcategories ? "Скрыть" : "Показать все";
   renderCharts();
 });
 
 toggleExpenseCategoryButton.addEventListener("click", () => {
   showAllExpenseCategories = !showAllExpenseCategories;
-  toggleExpenseCategoryButton.textContent = showAllExpenseCategories ? "Скрыть" : "Показать все";
   renderCharts();
+});
+
+reportRangeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    reportRangeButtons.forEach((item) => item.classList.remove("is-active"));
+    button.classList.add("is-active");
+    const range = button.dataset.reportRange;
+    if (range === "all") {
+      const bounds = getDateBounds(transactions);
+      setReportRange(bounds.start, bounds.end);
+    } else {
+      const days = Number.parseInt(range, 10);
+      const bounds = getDateBounds(transactions);
+      const end = bounds.end || new Date().toISOString().slice(0, 10);
+      const endDate = new Date(end);
+      const startDate = new Date(endDate);
+      startDate.setDate(endDate.getDate() - (days - 1));
+      setReportRange(startDate.toISOString().slice(0, 10), end);
+    }
+    renderReports();
+  });
+});
+
+reportGranularityButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    reportGranularityButtons.forEach((item) => item.classList.remove("is-active"));
+    button.classList.add("is-active");
+    reportGranularity = button.dataset.reportGranularity;
+    renderReports();
+  });
+});
+
+applyReportRangeButton.addEventListener("click", () => {
+  reportRangeButtons.forEach((item) => item.classList.remove("is-active"));
+  setReportRange(reportStartInput.value, reportEndInput.value);
+  renderReports();
 });
 
 renderCategories();
 resetForm();
+initializeReportRange();
 render();
 updateUndoState();
 setView(localStorage.getItem(VIEW_KEY) || "dashboard");
