@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Учет расходов и доходов</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>Учет расходов и доходов</h1>
+      <p class="subtitle">Быстрый учет финансов с хранением в браузере и экспортом в CSV.</p>
+    </div>
+    <div class="actions">
+      <button id="exportCsv" class="button secondary">Экспорт CSV</button>
+      <button id="clearAll" class="button danger">Очистить все</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Добавить операцию</h2>
+      <form id="transactionForm" class="form">
+        <label>
+          Дата
+          <input type="date" id="date" required />
+        </label>
+        <label>
+          Тип
+          <select id="type" required>
+            <option value="income">Доход</option>
+            <option value="expense">Расход</option>
+          </select>
+        </label>
+        <label>
+          Категория
+          <input type="text" id="category" placeholder="Например, зарплата" required />
+        </label>
+        <label>
+          Сумма
+          <input type="number" id="amount" min="0" step="0.01" required />
+        </label>
+        <label class="full">
+          Комментарий
+          <input type="text" id="note" placeholder="Опционально" />
+        </label>
+        <button type="submit" class="button primary">Сохранить</button>
+      </form>
+    </section>
+
+    <section class="summary">
+      <div class="summary-card income">
+        <span>Доходы</span>
+        <strong id="totalIncome">0 ₽</strong>
+      </div>
+      <div class="summary-card expense">
+        <span>Расходы</span>
+        <strong id="totalExpense">0 ₽</strong>
+      </div>
+      <div class="summary-card balance">
+        <span>Баланс</span>
+        <strong id="balance">0 ₽</strong>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>История операций</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Тип</th>
+              <th>Категория</th>
+              <th>Сумма</th>
+              <th>Комментарий</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="transactionTable"></tbody>
+        </table>
+      </div>
+      <p class="hint">Данные сохраняются в локальном хранилище браузера. Для переноса используйте экспорт CSV.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Шаблон CSV для Excel: <a href="template.csv" download>скачать</a>.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
