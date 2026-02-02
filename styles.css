@@ -323,8 +323,14 @@ body {
 
 .pie-chart {
   display: grid;
+  gap: 12px;
   place-items: center;
-  gap: 8px;
+}
+
+.pie-visual {
+  position: relative;
+  width: 160px;
+  height: 160px;
 }
 
 .pie-ring {
@@ -345,6 +351,7 @@ body {
 
 .pie-total {
   position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
   text-align: center;
@@ -452,6 +459,21 @@ td {
   gap: 16px;
 }
 
+.category-dropzone {
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px dashed #cbd5f5;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.category-dropzone.is-drop-target {
+  border-color: rgba(37, 99, 235, 0.7);
+  background: rgba(37, 99, 235, 0.12);
+}
+
 .category-manager {
   display: grid;
   gap: 16px;
@@ -463,6 +485,12 @@ td {
   padding: 16px;
   display: grid;
   gap: 12px;
+  cursor: grab;
+}
+
+.category-card.is-dragging {
+  opacity: 0.6;
+  background: #eef2ff;
 }
 
 .category-card-header {
@@ -496,14 +524,6 @@ td {
   background: rgba(37, 99, 235, 0.08);
 }
 
-.drop-hint {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #eef2ff;
-  font-size: 12px;
-  color: #4338ca;
-}
-
 .subcategory-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -531,13 +551,6 @@ td {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
-}
-
-.subcategory-tools select {
-  border-radius: 10px;
-  padding: 6px 10px;
-  border: 1px solid #e2e8f0;
-  font-size: 12px;
 }
 
 .chip {
