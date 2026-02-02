@@ -368,19 +368,29 @@ const renderLineChart = (target, data) => {
     return;
   }
 
-  const width = 700;
-  const height = 200;
-  const padding = 32;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
+  const width = 720;
+  const height = 260;
+  const paddingX = 56;
+  const paddingY = 28;
+  const chartWidth = width - paddingX * 2;
+  const chartHeight = height - paddingY * 2;
 
   const maxValue = Math.max(
-    ...data.map((item) => Math.max(item.income, item.expense, 0))
+    ...data.map((item) => Math.max(item.income, item.expense, 0)),
+    1
   );
 
   const scaleX = (index) =>
-    padding + (chartWidth * index) / Math.max(data.length - 1, 1);
-  const scaleY = (value) => padding + chartHeight - (value / maxValue) * chartHeight;
+    paddingX + (chartWidth * index) / Math.max(data.length - 1, 1);
+  const scaleY = (value) => paddingY + chartHeight - (value / maxValue) * chartHeight;
+
+  const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  background.setAttribute("x", paddingX - 8);
+  background.setAttribute("y", paddingY - 8);
+  background.setAttribute("width", chartWidth + 16);
+  background.setAttribute("height", chartHeight + 16);
+  background.setAttribute("fill", "#f8fafc");
+  background.setAttribute("rx", "16");
 
   const drawLine = (values, color) => {
     const points = values
@@ -390,23 +400,71 @@ const renderLineChart = (target, data) => {
     line.setAttribute("points", points);
     line.setAttribute("fill", "none");
     line.setAttribute("stroke", color);
-    line.setAttribute("stroke-width", "3");
+    line.setAttribute("stroke-width", "3.5");
     line.setAttribute("stroke-linecap", "round");
     return line;
   };
 
+  const drawArea = (values, color) => {
+    const points = values.map((value, index) => ({
+      x: scaleX(index),
+      y: scaleY(value),
+    }));
+    const baseY = paddingY + chartHeight;
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const d = [
+      `M ${points[0].x} ${baseY}`,
+      `L ${points[0].x} ${points[0].y}`,
+      ...points.slice(1).map((pt) => `L ${pt.x} ${pt.y}`),
+      `L ${points[points.length - 1].x} ${baseY}`,
+      "Z",
+    ].join(" ");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", color);
+    path.setAttribute("opacity", "0.12");
+    return path;
+  };
+
+  const drawPoints = (values, color) => {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    values.forEach((value, index) => {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", scaleX(index));
+      circle.setAttribute("cy", scaleY(value));
+      circle.setAttribute("r", "4");
+      circle.setAttribute("fill", "#fff");
+      circle.setAttribute("stroke", color);
+      circle.setAttribute("stroke-width", "2");
+      group.appendChild(circle);
+    });
+    return group;
+  };
+
   const grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
   for (let i = 0; i <= 4; i += 1) {
-    const y = padding + (chartHeight * i) / 4;
+    const y = paddingY + (chartHeight * i) / 4;
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", padding);
-    line.setAttribute("x2", width - padding);
+    line.setAttribute("x1", paddingX);
+    line.setAttribute("x2", width - paddingX);
     line.setAttribute("y1", y);
     line.setAttribute("y2", y);
     line.setAttribute("stroke", "#e2e8f0");
     line.setAttribute("stroke-dasharray", "4 4");
     grid.appendChild(line);
   }
+
+  const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  [maxValue, maxValue / 2, 0].forEach((value, index) => {
+    const y = paddingY + (chartHeight * index) / 2;
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", paddingX - 12);
+    label.setAttribute("y", y + 4);
+    label.setAttribute("text-anchor", "end");
+    label.setAttribute("fill", "#94a3b8");
+    label.setAttribute("font-size", "10");
+    label.textContent = currencyFormatter.format(value).replace(",00", "");
+    yAxis.appendChild(label);
+  });
 
   const axis = document.createElementNS("http://www.w3.org/2000/svg", "g");
   const labelStep = Math.max(1, Math.floor(data.length / 6));
@@ -424,13 +482,23 @@ const renderLineChart = (target, data) => {
     axis.appendChild(label);
   });
 
+  const incomeArea = drawArea(data.map((item) => item.income), "#16a34a");
+  const expenseArea = drawArea(data.map((item) => item.expense), "#ea580c");
   const incomeLine = drawLine(data.map((item) => item.income), "#16a34a");
   const expenseLine = drawLine(data.map((item) => item.expense), "#ea580c");
+  const incomePoints = drawPoints(data.map((item) => item.income), "#16a34a");
+  const expensePoints = drawPoints(data.map((item) => item.expense), "#ea580c");
 
+  target.appendChild(background);
   target.appendChild(grid);
+  target.appendChild(yAxis);
   target.appendChild(axis);
+  target.appendChild(incomeArea);
+  target.appendChild(expenseArea);
   target.appendChild(incomeLine);
   target.appendChild(expenseLine);
+  target.appendChild(incomePoints);
+  target.appendChild(expensePoints);
 };
 
 const buildSeries = (formatter, source = transactions) => {

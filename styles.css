@@ -366,7 +366,7 @@ body {
 .report-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .report-chart-card {
@@ -379,6 +379,14 @@ body {
 
 .report-chart-card.report-span {
   grid-column: 1 / -1;
+}
+
+.report-chart-card.report-full {
+  grid-column: 1 / -1;
+}
+
+.report-chart-card .chart {
+  min-height: 220px;
 }
 
 .chart-row {
