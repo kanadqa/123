@@ -41,12 +41,36 @@ const reportTransactionsCountEl = document.getElementById("reportTransactionsCou
 const reportExpenseCategories = document.getElementById("reportExpenseCategories");
 const reportExpenseSubcategories = document.getElementById("reportExpenseSubcategories");
 const reportIncomeSubcategories = document.getElementById("reportIncomeSubcategories");
+const totalAssetsEl = document.getElementById("totalAssets");
+const totalDebtsEl = document.getElementById("totalDebts");
+const netWorthEl = document.getElementById("netWorth");
+const assetForm = document.getElementById("assetForm");
+const assetNameInput = document.getElementById("assetName");
+const assetAmountInput = document.getElementById("assetAmount");
+const assetNoteInput = document.getElementById("assetNote");
+const assetTable = document.getElementById("assetTable");
+const debtForm = document.getElementById("debtForm");
+const debtNameInput = document.getElementById("debtName");
+const debtAmountInput = document.getElementById("debtAmount");
+const debtNoteInput = document.getElementById("debtNote");
+const debtTable = document.getElementById("debtTable");
+const goalForm = document.getElementById("goalForm");
+const goalYearInput = document.getElementById("goalYear");
+const goalTargetInput = document.getElementById("goalTarget");
+const goalActualInput = document.getElementById("goalActual");
+const goalTable = document.getElementById("goalTable");
+const capitalHistoryForm = document.getElementById("capitalHistoryForm");
+const capitalMonthInput = document.getElementById("capitalMonth");
+const capitalTotalInput = document.getElementById("capitalTotal");
+const capitalHistoryTable = document.getElementById("capitalHistoryTable");
+const capitalLineChart = document.getElementById("capitalLineChart");
 
 const STORAGE_KEY = "budget.transactions.v2";
 const CATEGORY_KEY = "budget.categories.v3";
 const VIEW_KEY = "budget.view.active";
 const LAYOUT_KEY = "budget.layout";
 const CHART_LIMIT = 6;
+const CAPITAL_KEY = "budget.capital.v1";
 
 const currencyFormatter = new Intl.NumberFormat("ru-RU", {
   style: "currency",
@@ -114,6 +138,27 @@ const loadCategories = () => {
   };
 };
 
+const loadCapital = () => {
+  try {
+    const raw = localStorage.getItem(CAPITAL_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (error) {
+    console.error("Не удалось загрузить капитал", error);
+  }
+  return {
+    assets: [],
+    debts: [],
+    goals: [],
+    history: [],
+  };
+};
+
+const saveCapital = (nextState) => {
+  localStorage.setItem(CAPITAL_KEY, JSON.stringify(nextState));
+};
+
 const saveCategories = (nextCategories) => {
   localStorage.setItem(CATEGORY_KEY, JSON.stringify(nextCategories));
 };
@@ -126,6 +171,7 @@ let showAllExpenseCategories = false;
 let categoryFilter = "all";
 let reportGranularity = "daily";
 let reportRange = { start: "", end: "" };
+let capitalState = loadCapital();
 
 const pushHistory = () => {
   historyStack.push({
@@ -729,6 +775,181 @@ const renderReports = () => {
   renderLineChart(reportLineChart, buildSeries(seriesFormatter, filtered));
 };
 
+const renderCapitalSummary = () => {
+  const assetTotal = capitalState.assets.reduce((sum, item) => sum + item.amount, 0);
+  const debtTotal = capitalState.debts.reduce((sum, item) => sum + item.amount, 0);
+  totalAssetsEl.textContent = currencyFormatter.format(assetTotal);
+  totalDebtsEl.textContent = currencyFormatter.format(debtTotal);
+  netWorthEl.textContent = currencyFormatter.format(assetTotal - debtTotal);
+};
+
+const renderCapitalTables = () => {
+  assetTable.innerHTML = "";
+  debtTable.innerHTML = "";
+  goalTable.innerHTML = "";
+  capitalHistoryTable.innerHTML = "";
+
+  if (capitalState.assets.length === 0) {
+    const row = document.createElement("tr");
+    row.innerHTML = "<td colspan='4' class='hint'>Добавьте первый актив.</td>";
+    assetTable.appendChild(row);
+  } else {
+    capitalState.assets.forEach((item, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${item.name}</td>
+        <td>${currencyFormatter.format(item.amount)}</td>
+        <td>${item.note || "—"}</td>
+        <td><button class="button secondary" data-asset-index="${index}">Удалить</button></td>
+      `;
+      assetTable.appendChild(row);
+    });
+  }
+
+  if (capitalState.debts.length === 0) {
+    const row = document.createElement("tr");
+    row.innerHTML = "<td colspan='4' class='hint'>Добавьте первый долг.</td>";
+    debtTable.appendChild(row);
+  } else {
+    capitalState.debts.forEach((item, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${item.name}</td>
+        <td>${currencyFormatter.format(item.amount)}</td>
+        <td>${item.note || "—"}</td>
+        <td><button class="button secondary" data-debt-index="${index}">Удалить</button></td>
+      `;
+      debtTable.appendChild(row);
+    });
+  }
+
+  if (capitalState.goals.length === 0) {
+    const row = document.createElement("tr");
+    row.innerHTML = "<td colspan='4' class='hint'>Добавьте первую цель.</td>";
+    goalTable.appendChild(row);
+  } else {
+    capitalState.goals
+      .slice()
+      .sort((a, b) => a.year - b.year)
+      .forEach((item, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${item.year}</td>
+          <td>${currencyFormatter.format(item.target)}</td>
+        <td>${item.actual == null ? "—" : currencyFormatter.format(item.actual)}</td>
+          <td><button class="button secondary" data-goal-index="${index}">Удалить</button></td>
+        `;
+        goalTable.appendChild(row);
+      });
+  }
+
+  if (capitalState.history.length === 0) {
+    const row = document.createElement("tr");
+    row.innerHTML = "<td colspan='4' class='hint'>Добавьте первую запись.</td>";
+    capitalHistoryTable.appendChild(row);
+  } else {
+    const sortedHistory = capitalState.history
+      .slice()
+      .sort((a, b) => a.month.localeCompare(b.month));
+    sortedHistory.forEach((item, index) => {
+      const prev = sortedHistory[index - 1];
+      const diff = prev ? item.total - prev.total : 0;
+      const diffLabel = prev
+        ? `${diff >= 0 ? "+" : "−"}${currencyFormatter.format(Math.abs(diff))}`
+        : "—";
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${item.month}</td>
+        <td>${currencyFormatter.format(item.total)}</td>
+        <td>${diffLabel}</td>
+        <td><button class="button secondary" data-history-index="${index}">Удалить</button></td>
+      `;
+      capitalHistoryTable.appendChild(row);
+    });
+  }
+};
+
+const renderCapitalChart = () => {
+  const data = capitalState.history
+    .slice()
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map((item) => ({
+      label: item.month,
+      income: item.total,
+      expense: 0,
+    }));
+  renderLineChart(capitalLineChart, data);
+};
+
+const renderCapital = () => {
+  renderCapitalSummary();
+  renderCapitalTables();
+  renderCapitalChart();
+};
+
+const addAsset = () => {
+  const name = assetNameInput.value.trim();
+  const amount = Number.parseFloat(assetAmountInput.value);
+  const note = assetNoteInput.value.trim();
+  if (!name || Number.isNaN(amount)) {
+    return;
+  }
+  capitalState.assets.push({ name, amount, note });
+  saveCapital(capitalState);
+  assetNameInput.value = "";
+  assetAmountInput.value = "";
+  assetNoteInput.value = "";
+  renderCapital();
+};
+
+const addDebt = () => {
+  const name = debtNameInput.value.trim();
+  const amount = Number.parseFloat(debtAmountInput.value);
+  const note = debtNoteInput.value.trim();
+  if (!name || Number.isNaN(amount)) {
+    return;
+  }
+  capitalState.debts.push({ name, amount, note });
+  saveCapital(capitalState);
+  debtNameInput.value = "";
+  debtAmountInput.value = "";
+  debtNoteInput.value = "";
+  renderCapital();
+};
+
+const addGoal = () => {
+  const year = Number.parseInt(goalYearInput.value, 10);
+  const target = Number.parseFloat(goalTargetInput.value);
+  const actual = Number.parseFloat(goalActualInput.value);
+  if (Number.isNaN(year) || Number.isNaN(target)) {
+    return;
+  }
+  capitalState.goals.push({ year, target, actual: Number.isNaN(actual) ? null : actual });
+  saveCapital(capitalState);
+  goalYearInput.value = "";
+  goalTargetInput.value = "";
+  goalActualInput.value = "";
+  renderCapital();
+};
+
+const addCapitalHistory = () => {
+  const month = capitalMonthInput.value;
+  const total = Number.parseFloat(capitalTotalInput.value);
+  if (!month || Number.isNaN(total)) {
+    return;
+  }
+  const existingIndex = capitalState.history.findIndex((item) => item.month === month);
+  if (existingIndex >= 0) {
+    capitalState.history[existingIndex] = { month, total };
+  } else {
+    capitalState.history.push({ month, total });
+  }
+  saveCapital(capitalState);
+  capitalMonthInput.value = "";
+  capitalTotalInput.value = "";
+  renderCapital();
+};
+
 const addCategory = () => {
   const name = newCategoryInput.value.trim();
   const subName = newSubcategoryInput.value.trim();
@@ -1098,6 +1319,7 @@ const render = () => {
   renderTable();
   renderCharts();
   renderReports();
+  renderCapital();
 };
 
 const initializeReportRange = () => {
@@ -1331,6 +1553,89 @@ applyReportRangeButton.addEventListener("click", () => {
   reportRangeButtons.forEach((item) => item.classList.remove("is-active"));
   setReportRange(reportStartInput.value, reportEndInput.value);
   renderReports();
+});
+
+assetForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addAsset();
+});
+
+debtForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addDebt();
+});
+
+goalForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addGoal();
+});
+
+capitalHistoryForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addCapitalHistory();
+});
+
+assetTable.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) {
+    return;
+  }
+  const index = Number.parseInt(target.dataset.assetIndex, 10);
+  if (Number.isNaN(index)) {
+    return;
+  }
+  capitalState.assets.splice(index, 1);
+  saveCapital(capitalState);
+  renderCapital();
+});
+
+debtTable.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) {
+    return;
+  }
+  const index = Number.parseInt(target.dataset.debtIndex, 10);
+  if (Number.isNaN(index)) {
+    return;
+  }
+  capitalState.debts.splice(index, 1);
+  saveCapital(capitalState);
+  renderCapital();
+});
+
+goalTable.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) {
+    return;
+  }
+  const index = Number.parseInt(target.dataset.goalIndex, 10);
+  if (Number.isNaN(index)) {
+    return;
+  }
+  capitalState.goals.splice(index, 1);
+  saveCapital(capitalState);
+  renderCapital();
+});
+
+capitalHistoryTable.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) {
+    return;
+  }
+  const index = Number.parseInt(target.dataset.historyIndex, 10);
+  if (Number.isNaN(index)) {
+    return;
+  }
+  const sortedHistory = capitalState.history
+    .slice()
+    .sort((a, b) => a.month.localeCompare(b.month));
+  const monthToRemove = sortedHistory[index]?.month;
+  if (!monthToRemove) {
+    return;
+  }
+  capitalState.history = capitalState.history.filter((item) => item.month !== monthToRemove);
+  saveCapital(capitalState);
+  renderCapital();
 });
 
 renderCategories();
