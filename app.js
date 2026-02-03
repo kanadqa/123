@@ -56,6 +56,13 @@ const capitalOverviewBody = document.getElementById("capitalOverviewBody");
 const capitalOverviewTotal = document.getElementById("capitalOverviewTotal");
 const capitalOverviewNote = document.getElementById("capitalOverviewNote");
 const capitalOverviewCurrency = document.getElementById("capitalOverviewCurrency");
+const capitalOverviewReal = document.getElementById("capitalOverviewReal");
+const capitalOverviewDebts = document.getElementById("capitalOverviewDebts");
+const capitalOverviewDelta = document.getElementById("capitalOverviewDelta");
+const capitalOverviewAssets = document.getElementById("capitalOverviewAssets");
+const capitalOverviewGoals = document.getElementById("capitalOverviewGoals");
+const capitalOverviewSnapshots = document.getElementById("capitalOverviewSnapshots");
+const capitalOverviewDebtsList = document.getElementById("capitalOverviewDebtsList");
 const capitalStructureButtons = document.querySelectorAll("[data-capital-structure]");
 const capitalOverviewFilters = document.querySelectorAll("[data-capital-filter]");
 const capitalAssetTypePie = document.getElementById("capitalAssetTypePie");
@@ -1250,13 +1257,22 @@ const capitalEnsureSnapshot = () => {
 
 const renderCapitalSummary = () => {
   const totals = capitalTotals();
-  capitalAssetsTotal.textContent = capitalFormatMoney(totals.assetsTotal);
-  capitalDebtsTotal.textContent = capitalFormatMoney(totals.debtsTotal);
-  capitalNetWorth.textContent = capitalFormatMoney(totals.netWorth);
+  if (capitalAssetsTotal) {
+    capitalAssetsTotal.textContent = capitalFormatMoney(totals.assetsTotal);
+  }
+  if (capitalDebtsTotal) {
+    capitalDebtsTotal.textContent = capitalFormatMoney(totals.debtsTotal);
+  }
+  if (capitalNetWorth) {
+    capitalNetWorth.textContent = capitalFormatMoney(totals.netWorth);
+  }
   return totals;
 };
 
 const renderCapitalLedger = () => {
+  if (!capitalLedger) {
+    return;
+  }
   const totals = capitalTotals();
   capitalLedger.innerHTML = "";
   capitalLedgerTotal.textContent = capitalFormatMoney(totals.assetsTotal);
@@ -1363,6 +1379,9 @@ const renderCapitalLedger = () => {
 };
 
 const renderCapitalStructureCharts = () => {
+  if (!capitalAssetTypeChart || !capitalAssetTypePie) {
+    return;
+  }
   const formatter = new Intl.NumberFormat("ru-RU", {
     style: "currency",
     currency: capitalState.settings.baseCurrency,
@@ -1490,6 +1509,139 @@ const renderCapitalOverview = () => {
   capitalOverviewTotal.textContent = formatter.format(grandTotal);
   if (missingRates.size) {
     capitalOverviewNote.textContent = `Не учтены суммы без курса: ${[...missingRates].join(", ")}.`;
+  }
+};
+
+const renderCapitalOverviewDashboard = () => {
+  if (!capitalOverviewTotal || !capitalOverviewAssets || !capitalOverviewGoals) {
+    return;
+  }
+  const totals = capitalTotals();
+  const formatter = new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: capitalState.settings.baseCurrency,
+    minimumFractionDigits: 2,
+  });
+  capitalOverviewTotal.textContent = formatter.format(totals.assetsTotal);
+  if (capitalOverviewReal) {
+    capitalOverviewReal.textContent = formatter.format(totals.netWorth);
+  }
+  if (capitalOverviewDebts) {
+    capitalOverviewDebts.textContent = formatter.format(totals.debtsTotal);
+  }
+
+  if (capitalOverviewDelta) {
+    const sorted = capitalState.snapshots.slice().sort((a, b) => a.month.localeCompare(b.month));
+    const last = sorted[sorted.length - 1];
+    const prev = sorted[sorted.length - 2];
+    if (last && prev && prev.netWorth) {
+      const deltaPercent = ((last.netWorth - prev.netWorth) / prev.netWorth) * 100;
+      const sign = deltaPercent >= 0 ? "+" : "";
+      capitalOverviewDelta.textContent = `${sign}${deltaPercent.toFixed(1)}% за месяц`;
+      capitalOverviewDelta.style.color = deltaPercent >= 0 ? "#16a34a" : "#dc2626";
+    } else {
+      capitalOverviewDelta.textContent = "—";
+    }
+  }
+
+  capitalOverviewAssets.innerHTML = "";
+  const assetRows = capitalState.assets.slice().sort((a, b) => b.amount - a.amount);
+  if (!assetRows.length) {
+    capitalOverviewAssets.innerHTML = "<p class='hint'>Добавьте активы.</p>";
+  } else {
+    assetRows.forEach((asset) => {
+      const converted = capitalToBase(asset.amount, asset.currency);
+      const amountLabel = converted == null && capitalIsUnconvertible(asset)
+        ? `нет курса для ${asset.currency}`
+        : formatter.format(converted ?? asset.amount);
+      const row = document.createElement("div");
+      row.className = "capital-overview-row";
+      row.innerHTML = `
+        <div>
+          <strong>${asset.name}</strong>
+          <span>${asset.category || asset.section || "В наличии"}</span>
+        </div>
+        <div>${amountLabel}</div>
+      `;
+      capitalOverviewAssets.appendChild(row);
+    });
+  }
+
+  capitalOverviewGoals.innerHTML = "";
+  if (!capitalState.goals.length) {
+    capitalOverviewGoals.innerHTML = "<p class='hint'>Добавьте финансовые цели.</p>";
+  } else {
+    capitalState.goals.forEach((goal) => {
+      const current = goalProgress(goal);
+      const percent = goal.targetAmount ? Math.min(100, (current / goal.targetAmount) * 100) : 0;
+      const goalRow = document.createElement("div");
+      goalRow.className = "capital-goal";
+      goalRow.innerHTML = `
+        <div class="capital-overview-row">
+          <div>
+            <strong>${goal.name}</strong>
+            <span>${goal.targetDate}</span>
+          </div>
+          <div>${percent.toFixed(0)}%</div>
+        </div>
+        <div class="capital-goal-bar"><span style="width:${percent}%"></span></div>
+        <div class="capital-overview-row">
+          <span>Цель</span>
+          <strong>${formatter.format(goal.targetAmount)}</strong>
+        </div>
+        <div class="capital-overview-row">
+          <span>Факт</span>
+          <strong>${formatter.format(current)}</strong>
+        </div>
+      `;
+      capitalOverviewGoals.appendChild(goalRow);
+    });
+  }
+
+  if (capitalOverviewSnapshots) {
+    capitalOverviewSnapshots.innerHTML = "";
+    const snapshots = capitalState.snapshots.slice().sort((a, b) => b.month.localeCompare(a.month)).slice(0, 4);
+    if (!snapshots.length) {
+      capitalOverviewSnapshots.innerHTML = "<p class='hint'>Нет снимков капитала.</p>";
+    } else {
+      snapshots.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "capital-overview-row";
+        const deltaLabel = item.delta ? `${item.delta > 0 ? "+" : ""}${formatter.format(item.delta)}` : "—";
+        row.innerHTML = `
+          <div>
+            <strong>${item.month}</strong>
+            <span>${deltaLabel}</span>
+          </div>
+          <div>${formatter.format(item.netWorth)}</div>
+        `;
+        capitalOverviewSnapshots.appendChild(row);
+      });
+    }
+  }
+
+  if (capitalOverviewDebtsList) {
+    capitalOverviewDebtsList.innerHTML = "";
+    if (!capitalState.debts.length) {
+      capitalOverviewDebtsList.innerHTML = "<p class='hint'>Долгов нет.</p>";
+    } else {
+      capitalState.debts.forEach((debt) => {
+        const converted = capitalToBase(debt.principal, debt.currency);
+        const amountLabel = converted == null && debt.currency !== capitalState.settings.baseCurrency
+          ? `нет курса для ${debt.currency}`
+          : formatter.format(converted ?? debt.principal);
+        const row = document.createElement("div");
+        row.className = "capital-overview-row";
+        row.innerHTML = `
+          <div>
+            <strong>${debt.name}</strong>
+            <span>${capitalDebtTypeLabel(debt.type)}</span>
+          </div>
+          <div>${amountLabel}</div>
+        `;
+        capitalOverviewDebtsList.appendChild(row);
+      });
+    }
   }
 };
 
@@ -1928,9 +2080,7 @@ const renderCapitalHistoryChart = () => {
 const renderCapitalView = () => {
   capitalEnsureSnapshot();
   renderCapitalSummary();
-  renderCapitalLedger();
-  renderCapitalStructureCharts();
-  renderCapitalOverview();
+  renderCapitalOverviewDashboard();
   renderCapitalAssets();
   renderCapitalDebts();
   renderCapitalPayoff();

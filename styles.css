@@ -815,6 +815,82 @@ td {
   margin-top: 0;
 }
 
+.capital-overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.capital-kpi {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.16);
+  display: grid;
+  gap: 8px;
+}
+
+.capital-kpi span {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.capital-kpi strong {
+  font-size: 22px;
+}
+
+.capital-kpi small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.capital-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.capital-overview-list {
+  display: grid;
+  gap: 10px;
+}
+
+.capital-overview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.capital-overview-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.capital-overview-row strong {
+  font-weight: 600;
+}
+
+.capital-goal {
+  display: grid;
+  gap: 8px;
+}
+
+.capital-goal-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.8);
+  overflow: hidden;
+}
+
+.capital-goal-bar span {
+  display: block;
+  height: 100%;
+  background: #7c3aed;
+}
 .capital-grid {
   display: grid;
   gap: 16px;

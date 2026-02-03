@@ -345,50 +345,55 @@
           </section>
 
           <section class="capital-tab is-active" data-capital-tab-panel="overview">
-            <section class="summary capital-summary">
-              <div class="summary-card income">
-                <span>Активы</span>
-                <strong id="capitalAssetsTotal">0 ₽</strong>
+            <section class="capital-overview-cards">
+              <div class="capital-kpi">
+                <span>Общий капитал</span>
+                <strong id="capitalOverviewTotal">0 ₽</strong>
+                <small id="capitalOverviewDelta">—</small>
               </div>
-              <div class="summary-card expense">
+              <div class="capital-kpi">
+                <span>Реальные деньги</span>
+                <strong id="capitalOverviewReal">0 ₽</strong>
+                <small>С учетом долгов</small>
+              </div>
+              <div class="capital-kpi">
                 <span>Долги</span>
-                <strong id="capitalDebtsTotal">0 ₽</strong>
-              </div>
-              <div class="summary-card balance">
-                <span>Чистый капитал</span>
-                <strong id="capitalNetWorth">0 ₽</strong>
+                <strong id="capitalOverviewDebts">0 ₽</strong>
+                <small>Кредиты и обязательства</small>
               </div>
             </section>
 
-            <section class="card capital-grid">
-              <div class="capital-card capital-full">
+            <section class="capital-overview-grid">
+              <div class="capital-card">
                 <div class="chart-title">
-                  <h3>Структура активов</h3>
-                  <div class="chip-group">
-                    <button class="chip is-active" data-capital-structure="bars">Список</button>
-                    <button class="chip" data-capital-structure="pie">Круговая</button>
-                  </div>
+                  <h3>Активы</h3>
+                  <span class="chip">В наличии</span>
                 </div>
-                <div id="capitalAssetTypeChart" class="chart"></div>
-                <div id="capitalAssetTypePie" class="chart is-hidden"></div>
+                <div id="capitalOverviewAssets" class="capital-overview-list"></div>
               </div>
 
-              <div class="capital-card capital-full">
+              <div class="capital-card">
                 <div class="chart-title">
-                  <h3>Мой общий капитал</h3>
-                  <div class="chip-group">
-                    <button class="chip is-active" data-capital-filter="all">Все</button>
-                    <button class="chip" data-capital-filter="high">Ликвидные</button>
-                    <button class="chip" data-capital-filter="low">Низколиквидные</button>
-                    <button class="chip" data-capital-filter="locked">Заблокированные</button>
-                  </div>
+                  <h3>Финансовые цели</h3>
+                  <span class="chip">Глобальные</span>
                 </div>
-                <div id="capitalLedger" class="capital-ledger"></div>
-                <div class="capital-ledger-total">
-                  <span>Факт</span>
-                  <strong id="capitalLedgerTotal">0 ₽</strong>
+                <div id="capitalOverviewGoals" class="capital-overview-list"></div>
+              </div>
+
+              <div class="capital-card">
+                <div class="chart-title">
+                  <h3>Динамика капитала</h3>
+                  <span class="chip">По месяцам</span>
                 </div>
-                <p id="capitalLedgerNote" class="hint"></p>
+                <div id="capitalOverviewSnapshots" class="capital-overview-list"></div>
+              </div>
+
+              <div class="capital-card">
+                <div class="chart-title">
+                  <h3>Долги</h3>
+                  <span class="chip">Контроль</span>
+                </div>
+                <div id="capitalOverviewDebtsList" class="capital-overview-list"></div>
               </div>
             </section>
           </section>
