@@ -819,6 +819,21 @@ td {
   font-size: 13px;
 }
 
+.capital-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.capital-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .capital-table input,
 .capital-table select,
 .capital-card input,

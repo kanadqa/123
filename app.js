@@ -47,7 +47,8 @@ const capitalPanels = document.querySelectorAll("[data-capital-tab-panel]");
 const capitalAssetsTotal = document.getElementById("capitalAssetsTotal");
 const capitalDebtsTotal = document.getElementById("capitalDebtsTotal");
 const capitalNetWorth = document.getElementById("capitalNetWorth");
-const capitalLiquidBuffer = document.getElementById("capitalLiquidBuffer");
+const capitalAssetList = document.getElementById("capitalAssetList");
+const capitalTopDeals = document.getElementById("capitalTopDeals");
 const capitalBaseCurrency = document.getElementById("capitalBaseCurrency");
 const capitalFxForm = document.getElementById("capitalFxForm");
 const capitalFxCode = document.getElementById("capitalFxCode");
@@ -60,6 +61,7 @@ const capitalAssetName = document.getElementById("capitalAssetName");
 const capitalAssetType = document.getElementById("capitalAssetType");
 const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
 const capitalAssetAmount = document.getElementById("capitalAssetAmount");
+const capitalAssetInvested = document.getElementById("capitalAssetInvested");
 const capitalAssetLiquidity = document.getElementById("capitalAssetLiquidity");
 const capitalAssetInstitution = document.getElementById("capitalAssetInstitution");
 const capitalAssetNote = document.getElementById("capitalAssetNote");
@@ -225,6 +227,7 @@ const migrateCapitalState = () => {
     type: "bank",
     currency: "RUB",
     amount: item.amount,
+    invested: item.amount,
     liquidity: "high",
     institution: "",
     note: item.note || "",
@@ -294,7 +297,10 @@ const normalizeCapitalState = () => {
   capitalState.settings = capitalState.settings || { baseCurrency: "RUB", fxRates: {} };
   capitalState.settings.baseCurrency = capitalState.settings.baseCurrency || "RUB";
   capitalState.settings.fxRates = capitalState.settings.fxRates || {};
-  capitalState.assets = capitalState.assets || [];
+  capitalState.assets = (capitalState.assets || []).map((asset) => ({
+    invested: asset.invested ?? asset.amount ?? 0,
+    ...asset,
+  }));
   capitalState.debts = capitalState.debts || [];
   capitalState.goals = capitalState.goals || [];
   capitalState.snapshots = capitalState.snapshots || [];
@@ -946,14 +952,7 @@ const capitalTotals = () => {
     const converted = capitalToBase(item.principal, item.currency);
     return sum + (converted ?? 0);
   }, 0);
-  const liquidBuffer = capitalState.assets.reduce((sum, item) => {
-    if (item.liquidity !== "high") {
-      return sum;
-    }
-    const converted = capitalToBase(item.amount, item.currency);
-    return sum + (converted ?? 0);
-  }, 0);
-  return { assetsTotal, debtsTotal, netWorth: assetsTotal - debtsTotal, liquidBuffer };
+  return { assetsTotal, debtsTotal, netWorth: assetsTotal - debtsTotal };
 };
 
 const capitalTypeLabel = (type) => ({
@@ -1022,7 +1021,19 @@ const renderCapitalOverview = () => {
   capitalAssetsTotal.textContent = capitalFormatMoney(totals.assetsTotal);
   capitalDebtsTotal.textContent = capitalFormatMoney(totals.debtsTotal);
   capitalNetWorth.textContent = capitalFormatMoney(totals.netWorth);
-  capitalLiquidBuffer.textContent = capitalFormatMoney(totals.liquidBuffer);
+
+  capitalAssetList.innerHTML = "";
+  if (!capitalState.assets.length) {
+    capitalAssetList.innerHTML = "<li class='hint'>Добавьте первый актив.</li>";
+  } else {
+    capitalState.assets.forEach((item) => {
+      const converted = capitalToBase(item.amount, item.currency);
+      const value = converted == null ? "—" : capitalFormatShort(converted);
+      const row = document.createElement("li");
+      row.innerHTML = `<span>${item.name}</span><strong>${value}</strong>`;
+      capitalAssetList.appendChild(row);
+    });
+  }
 
   capitalBaseCurrency.value = capitalState.settings.baseCurrency;
   capitalFxTable.innerHTML = "";
@@ -1074,6 +1085,33 @@ const renderCapitalOverview = () => {
     li.textContent = `Нет курсов для валют: ${missingRates.join(", ")}.`;
     capitalAlerts.appendChild(li);
   }
+
+  const deals = capitalState.assets
+    .map((item) => {
+      const current = capitalToBase(item.amount, item.currency);
+      const invested = capitalToBase(item.invested ?? 0, item.currency);
+      if (current == null || invested == null) {
+        return null;
+      }
+      return {
+        name: item.name,
+        profit: current - invested,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, 5);
+
+  capitalTopDeals.innerHTML = "";
+  if (!deals.length) {
+    capitalTopDeals.innerHTML = "<li class='hint'>Добавьте активы с вложениями.</li>";
+  } else {
+    deals.forEach((deal) => {
+      const row = document.createElement("li");
+      row.innerHTML = `<span>${deal.name}</span><strong>${capitalFormatShort(deal.profit)}</strong>`;
+      capitalTopDeals.appendChild(row);
+    });
+  }
 };
 
 const renderCapitalAssets = () => {
@@ -1085,13 +1123,15 @@ const renderCapitalAssets = () => {
   );
   if (!items.length) {
     const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='8' class='hint'>Добавьте первый актив.</td>";
+    row.innerHTML = "<td colspan='10' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
     return;
   }
   items.forEach((item) => {
     const row = document.createElement("tr");
     row.dataset.assetId = item.id;
+    const invested = item.invested ?? 0;
+    const profit = item.amount - invested;
     row.innerHTML = `
       <td><input type="text" value="${item.name}" data-field="name" /></td>
       <td>
@@ -1103,6 +1143,8 @@ const renderCapitalAssets = () => {
       </td>
       <td><input type="text" value="${item.currency}" data-field="currency" maxlength="3" /></td>
       <td><input type="number" value="${item.amount}" data-field="amount" step="0.01" /></td>
+      <td><input type="number" value="${invested}" data-field="invested" step="0.01" /></td>
+      <td><span>${profit.toFixed(2)}</span></td>
       <td>
         <select data-field="liquidity">
           ${["high", "mid", "low"]
@@ -1422,12 +1464,15 @@ const capitalUpdateAsset = (id, field, value) => {
   }
   if (field === "currency") {
     asset[field] = value.trim().toUpperCase();
+  } else if (field === "amount" || field === "invested") {
+    asset[field] = Number.parseFloat(value) || 0;
   } else {
-    asset[field] = field === "amount" ? Number.parseFloat(value) || 0 : value;
+    asset[field] = value;
   }
   asset.updatedAt = capitalNowIso();
   saveCapitalV2(capitalState);
   renderCapitalOverview();
+  renderCapitalAssets();
 };
 
 const capitalUpdateDebt = (id, field, value) => {
@@ -1473,12 +1518,14 @@ const capitalAddAsset = () => {
   if (!name || Number.isNaN(amount)) {
     return;
   }
+  const invested = capitalAssetInvested.value ? Number.parseFloat(capitalAssetInvested.value) : amount;
   capitalState.assets.push({
     id: capitalGenerateId("asset"),
     name,
     type: capitalAssetType.value,
     currency: capitalAssetCurrency.value.trim().toUpperCase() || capitalState.settings.baseCurrency,
     amount,
+    invested: Number.isNaN(invested) ? amount : invested,
     liquidity: capitalAssetLiquidity.value,
     institution: capitalAssetInstitution.value.trim(),
     note: capitalAssetNote.value.trim(),
