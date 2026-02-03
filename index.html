@@ -369,7 +369,7 @@
 
               <div class="capital-card capital-full">
                 <div class="chart-title">
-                  <h3>Где лежат деньги</h3>
+                  <h3>Мой общий капитал</h3>
                   <div class="chip-group">
                     <button class="chip is-active" data-capital-filter="all">Все</button>
                     <button class="chip" data-capital-filter="high">Ликвидные</button>
@@ -463,6 +463,16 @@
                     <datalist id="capitalSectionList"></datalist>
                   </label>
                   <label>
+                    Категория
+                    <input type="text" id="capitalAssetCategory" list="capitalCategoryList" placeholder="Например, Вклад" />
+                    <datalist id="capitalCategoryList"></datalist>
+                  </label>
+                  <label>
+                    Подкатегория
+                    <input type="text" id="capitalAssetSubcategory" list="capitalSubcategoryList" placeholder="Например, Сбербанк" />
+                    <datalist id="capitalSubcategoryList"></datalist>
+                  </label>
+                  <label>
                     Доступно до
                     <input type="date" id="capitalAssetMaturityDate" />
                   </label>
@@ -493,6 +503,25 @@
 
               <div class="capital-card">
                 <div class="chart-title">
+                  <h3>Категории активов</h3>
+                  <span class="hint">Категория и подкатегория задаются вручную.</span>
+                </div>
+                <form id="capitalCategoryForm" class="form compact-form">
+                  <label>
+                    Категория
+                    <input type="text" id="capitalCategoryName" placeholder="Например, Вклад" required />
+                  </label>
+                  <label>
+                    Подкатегория
+                    <input type="text" id="capitalSubcategoryName" placeholder="Например, Сбербанк" />
+                  </label>
+                  <button type="submit" class="button secondary">Добавить</button>
+                </form>
+                <div id="capitalCategoryManager" class="capital-category-list"></div>
+              </div>
+
+              <div class="capital-card">
+                <div class="chart-title">
                   <h3>Список активов</h3>
                   <div class="chip-group">
                     <button class="chip is-active" data-capital-asset-view="table">Таблица</button>
@@ -512,8 +541,12 @@
                           <th>Вложено</th>
                           <th>Прибыль</th>
                           <th>Секция</th>
+                          <th>Категория</th>
+                          <th>Подкатегория</th>
                           <th>Дата окончания</th>
+                          <th>Потенц. доходность</th>
                           <th>Ликвидность</th>
+                          <th>Корректировка</th>
                           <th>Комментарий</th>
                           <th></th>
                         </tr>
