@@ -775,6 +775,13 @@ td {
   align-items: center;
 }
 
+.capital-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .capital-summary-inline {
   display: flex;
   gap: 8px;
@@ -824,6 +831,150 @@ td {
 
 .capital-card.capital-full {
   grid-column: 1 / -1;
+}
+
+.capital-overview {
+  display: grid;
+  gap: 12px;
+}
+
+.capital-overview-table {
+  display: grid;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.capital-overview-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.2fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.7);
+}
+
+.capital-overview-head {
+  background: transparent;
+  box-shadow: none;
+  padding: 0 4px 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.capital-overview-section {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.capital-overview-row.is-warning {
+  box-shadow: inset 0 0 0 1px rgba(234, 88, 12, 0.4);
+  background: rgba(254, 215, 170, 0.2);
+}
+
+.capital-overview-cell.is-amount {
+  text-align: right;
+}
+
+.capital-overview-amount {
+  font-weight: 600;
+}
+
+.capital-overview-subtext {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.capital-overview-subtotal {
+  background: rgba(241, 245, 249, 0.9);
+  font-weight: 600;
+}
+
+.capital-overview-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.capital-ledger {
+  display: grid;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.capital-ledger-section {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.capital-ledger-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  align-items: center;
+}
+
+.capital-ledger-row.is-warning {
+  border-color: rgba(234, 88, 12, 0.4);
+  background: rgba(234, 88, 12, 0.08);
+}
+
+.capital-ledger-amount {
+  text-align: right;
+  font-weight: 600;
+}
+
+.capital-ledger-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.capital-ledger-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.capital-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.capital-badge {
+  background: #e2e8f0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #1f2937;
+}
+
+.capital-badge.low {
+  background: rgba(234, 88, 12, 0.15);
+  color: #c2410c;
+}
+
+.capital-badge.locked {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
 }
 
 .capital-form {
