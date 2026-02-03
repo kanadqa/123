@@ -1017,8 +1017,7 @@ const renderCapitalOverview = () => {
     capitalAssetList.innerHTML = "<li class='hint'>Добавьте первый актив.</li>";
   } else {
     capitalState.assets.forEach((item) => {
-      const converted = capitalToBase(item.amount, item.currency);
-      const value = converted == null ? "—" : capitalFormatShort(converted);
+      const value = `${item.amount.toFixed(2)} ${item.currency}`;
       const row = document.createElement("li");
       row.innerHTML = `<span>${item.name}</span><strong>${value}</strong>`;
       capitalAssetList.appendChild(row);
