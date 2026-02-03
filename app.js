@@ -80,6 +80,7 @@ const capitalAssetForm = document.getElementById("capitalAssetForm");
 const capitalAssetToggle = document.getElementById("capitalAssetToggle");
 const capitalAssetToggleButtons = document.querySelectorAll("[data-capital-asset-toggle]");
 const capitalAssetDrawer = document.getElementById("capitalAssetDrawer");
+const capitalAssetOverlay = document.getElementById("capitalAssetOverlay");
 const capitalAssetName = document.getElementById("capitalAssetName");
 const capitalAssetType = document.getElementById("capitalAssetType");
 const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
@@ -93,6 +94,8 @@ const capitalAssetMaturityDate = document.getElementById("capitalAssetMaturityDa
 const capitalAssetLiquidity = document.getElementById("capitalAssetLiquidity");
 const capitalAssetExpectedProfit = document.getElementById("capitalAssetExpectedProfit");
 const capitalAssetNote = document.getElementById("capitalAssetNote");
+const capitalAssetClose = document.getElementById("capitalAssetClose");
+const capitalAssetDelete = document.getElementById("capitalAssetDelete");
 const capitalAssetsTable = document.getElementById("capitalAssetsTable");
 const capitalAssetViewButtons = document.querySelectorAll("[data-capital-asset-view]");
 const capitalAssetPanels = document.querySelectorAll("[data-capital-asset-panel]");
@@ -1218,10 +1221,10 @@ const capitalTypeLabel = (type) => ({
 }[type] || type);
 
 const capitalLiquidityLabel = (value) => ({
-  high: "Высокая",
-  medium: "Средняя",
-  low: "Низкая",
-  locked: "Заблокировано",
+  high: "Можно вывести сразу",
+  medium: "Нужно 1–3 дня",
+  low: "Сложно/долго вывести",
+  locked: "Заблокировано до даты",
 }[value] || value);
 
 const capitalDebtTypeLabel = (value) => ({
@@ -1721,7 +1724,7 @@ const renderCapitalAssets = () => {
   const items = capitalState.assets;
   if (!items.length) {
     const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='11' class='hint'>Добавьте первый актив.</td>";
+    row.innerHTML = "<td colspan='10' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
     return;
   }
@@ -1757,6 +1760,7 @@ const renderCapitalAssets = () => {
         return capitalFormatMoney(converted ?? item.expectedProfit);
       })()
       : "—";
+    const maturityLabel = item.type === "deposit" ? (item.maturityDate || "—") : "";
     row.innerHTML = `
       <td>${item.name}</td>
       <td>${capitalTypeLabel(item.type)}</td>
@@ -1767,14 +1771,13 @@ const renderCapitalAssets = () => {
       </td>
       <td>${invested.toFixed(2)}</td>
       <td>${profit.toFixed(2)}</td>
-      <td>${item.maturityDate || "—"}</td>
+      <td>${maturityLabel}</td>
       <td>
         ${item.expectedProfit != null ? item.expectedProfit.toFixed(2) : "—"}
         <div class="hint">${expectedProfitLabel}</div>
       </td>
       <td>${capitalLiquidityLabel(item.liquidity)}</td>
       <td>${item.note || "—"}</td>
-      <td><button class="button secondary" data-asset-delete="${item.id}">Удалить</button></td>
     `;
     return row;
   };
@@ -1782,13 +1785,13 @@ const renderCapitalAssets = () => {
   grouped.forEach((subcategories, categoryName) => {
     const categoryRow = document.createElement("tr");
     categoryRow.className = "capital-table-section";
-    categoryRow.innerHTML = `<td colspan="11">${categoryName}</td>`;
+    categoryRow.innerHTML = `<td colspan="10">${categoryName}</td>`;
     capitalAssetsTable.appendChild(categoryRow);
 
     subcategories.forEach((assets, subcategoryName) => {
       const subRow = document.createElement("tr");
       subRow.className = "capital-table-subsection";
-      subRow.innerHTML = `<td colspan="11">${subcategoryName}</td>`;
+      subRow.innerHTML = `<td colspan="10">${subcategoryName}</td>`;
       capitalAssetsTable.appendChild(subRow);
       assets.forEach((asset) => {
         capitalAssetsTable.appendChild(buildAssetRow(asset));
@@ -2123,6 +2126,20 @@ const capitalSetAssetDrawer = (isOpen) => {
   });
 };
 
+const capitalSetAssetModal = (isOpen) => {
+  if (!capitalAssetDrawer) {
+    return;
+  }
+  capitalAssetDrawer.classList.toggle("is-modal", isOpen);
+  if (capitalAssetOverlay) {
+    capitalAssetOverlay.classList.toggle("is-active", isOpen);
+  }
+  document.body.classList.toggle("modal-open", isOpen);
+};
+
+const capitalIsAssetModalOpen = () =>
+  capitalAssetDrawer ? capitalAssetDrawer.classList.contains("is-modal") : false;
+
 const capitalUpdateAsset = (id, field, value) => {
   const asset = capitalState.assets.find((item) => item.id === id);
   if (!asset) {
@@ -2206,10 +2223,14 @@ const capitalResetAssetForm = () => {
   if (submitButton) {
     submitButton.textContent = "Добавить актив";
   }
+  if (capitalAssetDelete) {
+    capitalAssetDelete.classList.remove("is-visible");
+  }
 };
 
 const capitalFillAssetForm = (asset) => {
   capitalSetAssetDrawer(true);
+  capitalSetAssetModal(true);
   capitalAssetName.value = asset.name || "";
   capitalAssetType.value = asset.type || "cash";
   capitalAssetCurrency.value = asset.currency || capitalState.settings.baseCurrency;
@@ -2225,6 +2246,9 @@ const capitalFillAssetForm = (asset) => {
   const submitButton = capitalAssetForm.querySelector('button[type="submit"]');
   if (submitButton) {
     submitButton.textContent = "Сохранить изменения";
+  }
+  if (capitalAssetDelete) {
+    capitalAssetDelete.classList.add("is-visible");
   }
 };
 
@@ -2280,6 +2304,10 @@ const capitalAddAsset = () => {
   }
   saveCapitalV2(capitalState);
   capitalResetAssetForm();
+  if (capitalIsAssetModalOpen()) {
+    capitalSetAssetModal(false);
+    capitalSetAssetDrawer(false);
+  }
   renderCapitalView();
 };
 
@@ -2757,7 +2785,7 @@ const setView = (viewId) => {
     return;
   }
   if (viewId !== "capital" && page === "capital") {
-    window.location.href = "index.html";
+    window.location.href = `index.html?view=${viewId}`;
     return;
   }
   views.forEach((view) => {
@@ -3020,6 +3048,36 @@ if (capitalAssetToggleButtons.length) {
   });
 }
 
+if (capitalAssetClose) {
+  capitalAssetClose.addEventListener("click", () => {
+    capitalSetAssetModal(false);
+    capitalSetAssetDrawer(false);
+    capitalResetAssetForm();
+  });
+}
+
+if (capitalAssetOverlay) {
+  capitalAssetOverlay.addEventListener("click", () => {
+    capitalSetAssetModal(false);
+    capitalSetAssetDrawer(false);
+    capitalResetAssetForm();
+  });
+}
+
+if (capitalAssetDelete) {
+  capitalAssetDelete.addEventListener("click", () => {
+    if (!capitalEditingAssetId || !confirm("Удалить актив?")) {
+      return;
+    }
+    capitalState.assets = capitalState.assets.filter((item) => item.id !== capitalEditingAssetId);
+    saveCapitalV2(capitalState);
+    capitalSetAssetModal(false);
+    capitalSetAssetDrawer(false);
+    capitalResetAssetForm();
+    renderCapitalView();
+  });
+}
+
 capitalAssetForm.addEventListener("submit", (event) => {
   event.preventDefault();
   capitalAddAsset();
@@ -3139,18 +3197,7 @@ capitalAssetType.addEventListener("change", () => {
 });
 
 capitalAssetsTable.addEventListener("click", (event) => {
-  const target = event.target;
-  if (target instanceof HTMLButtonElement) {
-    const id = target.dataset.assetDelete;
-    if (!id || !confirm("Удалить актив?")) {
-      return;
-    }
-    capitalState.assets = capitalState.assets.filter((item) => item.id !== id);
-    saveCapitalV2(capitalState);
-    renderCapitalView();
-    return;
-  }
-  const row = target.closest("tr");
+  const row = event.target.closest("tr");
   if (!row || !row.dataset.assetId) {
     return;
   }
@@ -3159,7 +3206,6 @@ capitalAssetsTable.addEventListener("click", (event) => {
     return;
   }
   capitalFillAssetForm(asset);
-  capitalAssetForm.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 capitalDebtForm.addEventListener("submit", (event) => {
@@ -3300,7 +3346,10 @@ const initializeApp = async () => {
   const savedView = await dbGet(VIEW_KEY);
   const savedLayout = await dbGet(LAYOUT_KEY);
   const page = document.body.dataset.page || "main";
-  const targetView = page === "capital" ? "capital" : (savedView || "dashboard");
+  const urlView = page === "main" ? new URLSearchParams(window.location.search).get("view") : null;
+  const targetView = page === "capital"
+    ? "capital"
+    : (urlView || savedView || "dashboard");
   setView(targetView);
   setLayout(savedLayout || "comfort");
 };

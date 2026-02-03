@@ -1259,6 +1259,39 @@ td {
   pointer-events: auto;
 }
 
+.capital-asset-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 40;
+}
+
+.capital-asset-overlay.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.capital-asset-drawer.is-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(900px, 92vw);
+  max-height: 82vh;
+  overflow: auto;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 50;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.2);
+}
+
+.modal-open {
+  overflow: hidden;
+}
+
 .capital-asset-form {
   display: grid;
   gap: 16px;
@@ -1296,6 +1329,16 @@ td {
 .capital-asset-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#capitalAssetDelete {
+  display: none;
+}
+
+#capitalAssetDelete.is-visible {
+  display: inline-flex;
 }
 
 .capital-fx-summary {
@@ -1361,19 +1404,22 @@ td {
 
 .capital-table-section td,
 .capital-table-subsection td {
-  background: #f1f5f9;
-  color: var(--muted);
-  font-weight: 600;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   font-size: 12px;
+  border-left: 4px solid rgba(59, 130, 246, 0.7);
 }
 
 .capital-table-subsection td {
-  background: #f8fafc;
+  background: #eef2f7;
   text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  color: #334155;
+  border-left: 4px solid rgba(148, 163, 184, 0.6);
 }
 
 .capital-table-structured {
