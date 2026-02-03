@@ -77,6 +77,9 @@ const capitalFxUpdated = document.getElementById("capitalFxUpdated");
 const capitalFxChart = document.getElementById("capitalFxChart");
 const capitalFxNote = document.getElementById("capitalFxNote");
 const capitalAssetForm = document.getElementById("capitalAssetForm");
+const capitalAssetToggle = document.getElementById("capitalAssetToggle");
+const capitalAssetToggleButtons = document.querySelectorAll("[data-capital-asset-toggle]");
+const capitalAssetDrawer = document.getElementById("capitalAssetDrawer");
 const capitalAssetName = document.getElementById("capitalAssetName");
 const capitalAssetType = document.getElementById("capitalAssetType");
 const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
@@ -2118,6 +2121,21 @@ const capitalSetTab = (tabId) => {
   });
 };
 
+const capitalSetAssetDrawer = (isOpen) => {
+  if (!capitalAssetDrawer) {
+    return;
+  }
+  capitalAssetDrawer.classList.toggle("is-open", isOpen);
+  if (capitalAssetToggle) {
+    capitalAssetToggle.setAttribute("aria-expanded", String(isOpen));
+    capitalAssetToggle.textContent = isOpen ? "Скрыть форму" : "Добавить новый актив";
+  }
+  capitalAssetToggleButtons.forEach((button) => {
+    button.setAttribute("aria-expanded", String(isOpen));
+    button.textContent = isOpen ? "Скрыть форму" : "Открыть форму";
+  });
+};
+
 const capitalUpdateAsset = (id, field, value) => {
   const asset = capitalState.assets.find((item) => item.id === id);
   if (!asset) {
@@ -2206,6 +2224,7 @@ const capitalResetAssetForm = () => {
 };
 
 const capitalFillAssetForm = (asset) => {
+  capitalSetAssetDrawer(true);
   capitalAssetName.value = asset.name || "";
   capitalAssetType.value = asset.type || "cash";
   capitalAssetCurrency.value = asset.currency || capitalState.settings.baseCurrency;
@@ -2992,6 +3011,30 @@ capitalTabs.forEach((tab) => {
     capitalSetTab(tab.dataset.capitalTab);
   });
 });
+
+if (capitalAssetDrawer) {
+  capitalSetAssetDrawer(false);
+}
+
+if (capitalAssetToggle) {
+  capitalAssetToggle.addEventListener("click", () => {
+    capitalSetAssetDrawer(!capitalAssetDrawer.classList.contains("is-open"));
+    if (capitalAssetDrawer.classList.contains("is-open")) {
+      capitalAssetDrawer.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+}
+
+if (capitalAssetToggleButtons.length) {
+  capitalAssetToggleButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      capitalSetAssetDrawer(!capitalAssetDrawer.classList.contains("is-open"));
+      if (capitalAssetDrawer.classList.contains("is-open")) {
+        capitalAssetDrawer.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+}
 
 capitalAssetForm.addEventListener("submit", (event) => {
   event.preventDefault();

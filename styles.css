@@ -1177,6 +1177,31 @@ td {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.capital-asset-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.capital-assets-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.capital-assets-sidebar {
+  display: grid;
+  gap: 16px;
+}
+
+.capital-assets-main {
+  display: grid;
+  gap: 16px;
+}
+
 .capital-add-panel {
   background: #fff;
   border-radius: 12px;
@@ -1184,6 +1209,91 @@ td {
   border: 1px solid rgba(226, 232, 240, 0.8);
   display: grid;
   gap: 12px;
+}
+
+.capital-insight {
+  background: #f8fafc;
+}
+
+.capital-insight-list {
+  display: grid;
+  gap: 8px;
+  padding-left: 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.capital-action-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.capital-asset-drawer {
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: max-height 0.3s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+
+.capital-asset-drawer.is-open {
+  max-height: 2000px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.capital-asset-form {
+  display: grid;
+  gap: 16px;
+}
+
+.capital-asset-columns {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.capital-asset-block {
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  display: grid;
+  gap: 10px;
+}
+
+.capital-asset-block h5 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.capital-asset-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.capital-asset-fields .full {
+  grid-column: 1 / -1;
+}
+
+.capital-asset-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .capital-fx-summary {
@@ -1431,6 +1541,15 @@ td {
 
   .capital-hero-stats {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .capital-assets-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .capital-action-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
