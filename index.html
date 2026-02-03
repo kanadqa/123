@@ -189,9 +189,18 @@
 
         <section class="view" data-view="categories">
           <section class="card">
-            <h2>Категории</h2>
+            <div class="category-header">
+              <div>
+                <h2>Категории</h2>
+                <p class="hint">Выберите тип категорий для настройки.</p>
+              </div>
+              <div class="chip-group category-scope-tabs">
+                <button class="chip is-active" data-category-scope="regular">Обычные</button>
+                <button class="chip" data-category-scope="capital">Капитал</button>
+              </div>
+            </div>
             <div class="category-layout">
-              <div class="category-panel">
+              <div class="category-panel is-active" data-category-panel="regular">
                 <h3>Добавить категорию или подкатегорию</h3>
                 <div class="form two-columns">
                   <label>
@@ -214,10 +223,27 @@
                 </div>
                 <p class="hint">Если категория уже существует, будет добавлена подкатегория. Тип учитывается только при создании новой категории.</p>
               </div>
+
+              <div class="category-panel" data-category-panel="capital">
+                <h3>Категории активов</h3>
+                <p class="hint">Категории и подкатегории капитала задаются вручную.</p>
+                <form id="capitalCategoryForm" class="form compact-form">
+                  <label>
+                    Категория
+                    <input type="text" id="capitalCategoryName" placeholder="Например, Вклад" required />
+                  </label>
+                  <label>
+                    Подкатегория
+                    <input type="text" id="capitalSubcategoryName" placeholder="Например, Сбербанк" />
+                  </label>
+                  <button type="submit" class="button secondary">Добавить</button>
+                </form>
+                <div id="capitalCategoryManager" class="capital-category-list"></div>
+              </div>
             </div>
           </section>
 
-          <section class="card">
+          <section class="card category-panel is-active" data-category-panel="regular">
             <div class="category-header">
               <div>
                 <h2>Управление категориями</h2>
@@ -389,47 +415,50 @@
 
           <section class="capital-tab" data-capital-tab-panel="assets">
             <section class="card capital-grid">
-              <div class="capital-card">
-                <h3>Курсы валют</h3>
-                <div class="form compact-form">
-                  <label>
-                    Базовая валюта
-                    <select id="capitalBaseCurrency">
-                      <option value="RUB">RUB</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </label>
-                </div>
-                <form id="capitalFxForm" class="form compact-form">
-                  <label>
-                    Валюта
-                    <input type="text" id="capitalFxCode" placeholder="USD" maxlength="3" />
-                  </label>
-                  <label>
-                    Курс к базе
-                    <input type="number" id="capitalFxRate" min="0" step="0.0001" />
-                  </label>
-                  <button type="submit" class="button secondary">Добавить курс</button>
-                </form>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Валюта</th>
-                        <th>Курс</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="capitalFxTable"></tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div class="capital-card">
-                <h3>Добавить актив</h3>
-                <p class="hint">Быстро фиксируйте вклад/инвестицию: сколько вложили и сколько сейчас.</p>
-                <form id="capitalAssetForm" class="form capital-form">
+              <div class="capital-card capital-full">
+                <h3>Добавить активы</h3>
+                <p class="hint">Обновляйте курсы и добавляйте активы в одном месте.</p>
+                <div class="capital-add-grid">
+                  <div class="capital-add-panel">
+                    <h4>Курсы валют</h4>
+                    <div class="form compact-form">
+                      <label>
+                        Базовая валюта
+                        <select id="capitalBaseCurrency">
+                          <option value="RUB">RUB</option>
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
+                        </select>
+                      </label>
+                    </div>
+                    <form id="capitalFxForm" class="form compact-form">
+                      <label>
+                        Валюта
+                        <input type="text" id="capitalFxCode" placeholder="USD" maxlength="3" />
+                      </label>
+                      <label>
+                        Курс к базе
+                        <input type="number" id="capitalFxRate" min="0" step="0.0001" />
+                      </label>
+                      <button type="submit" class="button secondary">Добавить курс</button>
+                    </form>
+                    <div class="table-wrapper">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Валюта</th>
+                            <th>Курс</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody id="capitalFxTable"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div class="capital-add-panel">
+                    <h4>Новый актив</h4>
+                    <p class="hint">Быстро фиксируйте вклад/инвестицию: сколько вложили и сколько сейчас.</p>
+                    <form id="capitalAssetForm" class="form capital-form">
                   <label>
                     Название
                     <input type="text" id="capitalAssetName" placeholder="Например, Сбер вклад" required />
@@ -497,30 +526,13 @@
                     Комментарий
                     <input type="text" id="capitalAssetNote" placeholder="Опционально" />
                   </label>
-                  <button type="submit" class="button primary">Добавить актив</button>
-                </form>
-              </div>
-
-              <div class="capital-card">
-                <div class="chart-title">
-                  <h3>Категории активов</h3>
-                  <span class="hint">Категория и подкатегория задаются вручную.</span>
+                      <button type="submit" class="button primary">Добавить актив</button>
+                    </form>
+                  </div>
                 </div>
-                <form id="capitalCategoryForm" class="form compact-form">
-                  <label>
-                    Категория
-                    <input type="text" id="capitalCategoryName" placeholder="Например, Вклад" required />
-                  </label>
-                  <label>
-                    Подкатегория
-                    <input type="text" id="capitalSubcategoryName" placeholder="Например, Сбербанк" />
-                  </label>
-                  <button type="submit" class="button secondary">Добавить</button>
-                </form>
-                <div id="capitalCategoryManager" class="capital-category-list"></div>
               </div>
 
-              <div class="capital-card">
+              <div class="capital-card capital-full">
                 <div class="chart-title">
                   <h3>Список активов</h3>
                   <div class="chip-group">
@@ -546,7 +558,7 @@
                           <th>Дата окончания</th>
                           <th>Потенц. доходность</th>
                           <th>Ликвидность</th>
-                          <th>Корректировка</th>
+                          <th>Операция</th>
                           <th>Комментарий</th>
                           <th></th>
                         </tr>

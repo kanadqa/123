@@ -14,6 +14,8 @@ const categoryList = document.getElementById("categoryList");
 const addCategoryButton = document.getElementById("addCategory");
 const newCategoryInput = document.getElementById("newCategory");
 const newSubcategoryInput = document.getElementById("newSubcategory");
+const categoryScopeButtons = document.querySelectorAll("[data-category-scope]");
+const categoryPanels = document.querySelectorAll("[data-category-panel]");
 const expenseCategoryChart = document.getElementById("expenseCategoryChart");
 const incomeSubcategoryChart = document.getElementById("incomeSubcategoryChart");
 const expenseSubcategoryChart = document.getElementById("expenseSubcategoryChart");
@@ -1403,7 +1405,7 @@ const renderCapitalAssets = () => {
   const items = capitalState.assets;
   if (!items.length) {
     const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='14' class='hint'>Добавьте первый актив.</td>";
+    row.innerHTML = "<td colspan='15' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
     capitalAssetsCards.innerHTML = "<p class='hint'>Добавьте первый актив.</p>";
     capitalAssetsCompact.innerHTML = "<li class='hint'>Добавьте первый актив.</li>";
@@ -1487,13 +1489,13 @@ const renderCapitalAssets = () => {
   grouped.forEach((subcategories, categoryName) => {
     const categoryRow = document.createElement("tr");
     categoryRow.className = "capital-table-section";
-    categoryRow.innerHTML = `<td colspan="14">${categoryName}</td>`;
+    categoryRow.innerHTML = `<td colspan="15">${categoryName}</td>`;
     capitalAssetsTable.appendChild(categoryRow);
 
     subcategories.forEach((assets, subcategoryName) => {
       const subRow = document.createElement("tr");
       subRow.className = "capital-table-subsection";
-      subRow.innerHTML = `<td colspan="14">${subcategoryName}</td>`;
+      subRow.innerHTML = `<td colspan="15">${subcategoryName}</td>`;
       capitalAssetsTable.appendChild(subRow);
       assets.forEach((asset) => {
         capitalAssetsTable.appendChild(buildAssetRow(asset));
@@ -2524,6 +2526,17 @@ filterTabs.forEach((tab) => {
     tab.classList.add("is-active");
     categoryFilter = tab.dataset.filter;
     renderCategoryManager();
+  });
+});
+
+categoryScopeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    categoryScopeButtons.forEach((item) => item.classList.remove("is-active"));
+    button.classList.add("is-active");
+    const scope = button.dataset.categoryScope;
+    categoryPanels.forEach((panel) => {
+      panel.classList.toggle("is-active", panel.dataset.categoryPanel === scope);
+    });
   });
 });
 

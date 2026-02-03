@@ -1001,6 +1001,35 @@ td {
   gap: 8px;
 }
 
+.category-scope-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.category-panel {
+  display: none;
+}
+
+.category-panel.is-active {
+  display: block;
+}
+
+.capital-add-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.capital-add-panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  display: grid;
+  gap: 12px;
+}
+
 .capital-category-card {
   background: #fff;
   border-radius: 12px;
