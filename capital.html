@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Капитал — Финансы</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="layout-comfort" data-page="capital">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon">₽</span>
+        <div>
+          <h1>Финансы</h1>
+          <p>личный ассистент</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-link is-active" href="index.html?view=dashboard" data-view-target="dashboard">Обзор</a>
+        <a class="nav-link" href="index.html?view=transactions" data-view-target="transactions">Операции</a>
+        <a class="nav-link" href="index.html?view=categories" data-view-target="categories">Категории</a>
+        <a class="nav-link" href="index.html?view=reports" data-view-target="reports">Отчеты</a>
+        <a class="nav-link" href="capital.html" data-view-target="capital">Капитал</a>
+      </nav>
+
+      <div class="layout-picker">
+        <h2>Варианты интерфейса</h2>
+        <div class="layout-options">
+          <button class="layout-option" data-layout="comfort">Комфорт</button>
+          <button class="layout-option" data-layout="balanced">Баланс</button>
+          <button class="layout-option" data-layout="compact">Компакт</button>
+        </div>
+        <p class="hint">Выберите удобную плотность интерфейса.</p>
+      </div>
+    </aside>
+
+    <div class="app-content">
+      <header class="topbar">
+        <div>
+          <h2 id="viewTitle">Обзор</h2>
+          <p class="subtitle">Быстрый учет финансов с диаграммами и категориями.</p>
+        </div>
+        <div class="actions">
+          <button id="undoAction" class="button secondary">Отменить</button>
+          <button id="exportCsv" class="button secondary">Экспорт CSV</button>
+          <button id="clearAll" class="button danger">Очистить все</button>
+        </div>
+      </header>
+
+      <main class="container">
+        <section class="view is-active" data-view="dashboard">
+          <section class="summary">
+            <div class="summary-card income">
+              <span>Доходы</span>
+              <strong id="totalIncome">0 ₽</strong>
+            </div>
+            <div class="summary-card expense">
+              <span>Расходы</span>
+              <strong id="totalExpense">0 ₽</strong>
+              <small id="expensePercent" class="summary-subtitle">0%</small>
+            </div>
+            <div class="summary-card balance">
+              <span>Баланс</span>
+              <strong id="balance">0 ₽</strong>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Диаграммы</h2>
+            <div class="charts">
+              <div class="chart-card">
+                <h3>Доходы по подкатегориям</h3>
+                <div id="incomeSubcategoryChart" class="chart"></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">
+                  <h3>Расходы по категориям</h3>
+                  <button id="toggleExpenseCategoryChart" class="chip">Показать все</button>
+                </div>
+                <div id="expenseCategoryChart" class="chart chart-scroll"></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">
+                  <h3>Подкатегории (расходы)</h3>
+                  <button id="toggleSubcategoryChart" class="chip">Показать все</button>
+                </div>
+                <div id="expenseSubcategoryChart" class="chart chart-scroll"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Круговые диаграммы</h2>
+            <div class="charts">
+              <div class="chart-card">
+                <h3>Структура расходов по категориям</h3>
+                <div id="expensePie" class="chart"></div>
+              </div>
+              <div class="chart-card">
+                <h3>Структура расходов по подкатегориям</h3>
+                <div id="expenseSubcategoryPie" class="chart"></div>
+              </div>
+              <div class="chart-card">
+                <h3>Структура доходов по подкатегориям</h3>
+                <div id="incomePie" class="chart"></div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" data-view="transactions">
+          <section class="card">
+            <h2>Добавить операцию</h2>
+            <form id="transactionForm" class="form">
+              <label>
+                Дата
+                <input type="date" id="date" required />
+              </label>
+              <label>
+                Тип
+                <select id="type" required>
+                  <option value="income">Доход</option>
+                  <option value="expense">Расход</option>
+                </select>
+              </label>
+              <label>
+                Категория
+                <select id="category" required></select>
+              </label>
+              <label>
+                Подкатегория
+                <select id="subcategory"></select>
+              </label>
+              <label>
+                Сумма
+                <input type="number" id="amount" min="0" step="0.01" required />
+              </label>
+              <label class="full">
+                Комментарий
+                <input type="text" id="note" placeholder="Опционально" />
+              </label>
+              <button type="submit" class="button primary">Сохранить</button>
+            </form>
+          </section>
+
+          <section class="card">
+            <h2>История операций</h2>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Тип</th>
+                    <th>Категория</th>
+                    <th>Подкатегория</th>
+                    <th>Сумма</th>
+                    <th>Комментарий</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="transactionTable"></tbody>
+              </table>
+            </div>
+            <p class="hint">Данные сохраняются в локальном хранилище браузера. Для переноса используйте экспорт CSV.</p>
+          </section>
+        </section>
+
+        <section class="view" data-view="categories">
+          <section class="card">
+            <div class="category-header">
+              <div>
+                <h2>Категории</h2>
+                <p class="hint">Выберите тип категорий для настройки.</p>
+              </div>
+              <div class="chip-group category-scope-tabs">
+                <button class="chip is-active" data-category-scope="regular">Обычные</button>
+                <button class="chip" data-category-scope="capital">Капитал</button>
+              </div>
+            </div>
+            <div class="category-layout">
+              <div class="category-panel is-active" data-category-panel="regular">
+                <h3>Добавить категорию или подкатегорию</h3>
+                <div class="form two-columns">
+                  <label>
+                    Категория
+                    <input type="text" id="newCategory" placeholder="Например, Еда" list="categoryList" />
+                    <datalist id="categoryList"></datalist>
+                  </label>
+                  <label>
+                    Тип категории
+                    <select id="categoryType">
+                      <option value="expense">Расход</option>
+                      <option value="income">Доход</option>
+                    </select>
+                  </label>
+                  <label>
+                    Подкатегория (опционально)
+                    <input type="text" id="newSubcategory" placeholder="Например, Еда вне дома" />
+                  </label>
+                  <button id="addCategory" class="button secondary" type="button">Добавить</button>
+                </div>
+                <p class="hint">Если категория уже существует, будет добавлена подкатегория. Тип учитывается только при создании новой категории.</p>
+              </div>
+
+              <div class="category-panel" data-category-panel="capital">
+                <h3>Категории активов</h3>
+                <p class="hint">Категории и подкатегории капитала задаются вручную.</p>
+                <form id="capitalCategoryForm" class="form compact-form">
+                  <label>
+                    Категория
+                    <input type="text" id="capitalCategoryName" placeholder="Например, Вклад" required />
+                  </label>
+                  <label>
+                    Подкатегория
+                    <input type="text" id="capitalSubcategoryName" placeholder="Например, Сбербанк" />
+                  </label>
+                  <button type="submit" class="button secondary">Добавить</button>
+                </form>
+                <div id="capitalCategoryManager" class="capital-category-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card category-panel is-active" data-category-panel="regular">
+            <div class="category-header">
+              <div>
+                <h2>Управление категориями</h2>
+                <p class="hint">Перетаскивайте подкатегории и категории между карточками.</p>
+              </div>
+              <div class="filter-tabs">
+                <button class="chip is-active" data-filter="all">Все</button>
+                <button class="chip" data-filter="expense">Расходы</button>
+                <button class="chip" data-filter="income">Доходы</button>
+              </div>
+            </div>
+            <div class="category-dropzone" data-dropzone-root>
+              Категории верхнего уровня
+            </div>
+            <div id="categoryManager" class="category-manager"></div>
+          </section>
+        </section>
+
+        <section class="view" data-view="reports">
+          <section class="card report-card">
+            <div class="report-header">
+              <div>
+                <h2>Отчетный период</h2>
+                <p class="hint">Выберите период, чтобы отчет отражал текущую динамику и структуру расходов.</p>
+              </div>
+              <div class="report-quick">
+                <button class="chip is-active" data-report-range="30">30 дней</button>
+                <button class="chip" data-report-range="7">7 дней</button>
+                <button class="chip" data-report-range="90">90 дней</button>
+                <button class="chip" data-report-range="all">Все время</button>
+              </div>
+            </div>
+            <div class="report-range">
+              <label>
+                С
+                <input type="date" id="reportStart" />
+              </label>
+              <label>
+                По
+                <input type="date" id="reportEnd" />
+              </label>
+              <button id="applyReportRange" class="button secondary" type="button">Показать</button>
+            </div>
+          </section>
+
+          <section class="summary report-summary">
+            <div class="summary-card income">
+              <span>Доходы за период</span>
+              <strong id="reportIncome">0 ₽</strong>
+            </div>
+            <div class="summary-card expense">
+              <span>Расходы за период</span>
+              <strong id="reportExpense">0 ₽</strong>
+            </div>
+            <div class="summary-card balance">
+              <span>Баланс периода</span>
+              <strong id="reportBalance">0 ₽</strong>
+            </div>
+            <div class="summary-card neutral">
+              <span>Операций</span>
+              <strong id="reportTransactionsCount">0</strong>
+            </div>
+          </section>
+
+          <section class="card report-grid">
+            <div class="report-chart-card report-span">
+              <div class="chart-title">
+                <h3>Динамика</h3>
+                <div class="chip-group">
+                  <button class="chip is-active" data-report-granularity="daily">По дням</button>
+                  <button class="chip" data-report-granularity="monthly">По месяцам</button>
+                </div>
+              </div>
+              <div class="line-chart">
+                <svg id="reportLineChart" viewBox="0 0 720 260" aria-label="График доходов и расходов"></svg>
+                <div class="line-legend">
+                  <span><i class="legend-dot income"></i>Доходы</span>
+                  <span><i class="legend-dot expense"></i>Расходы</span>
+                </div>
+              </div>
+            </div>
+            <div class="report-chart-card report-full">
+              <h3>Структура расходов по категориям</h3>
+              <div id="reportExpenseCategories" class="chart"></div>
+            </div>
+            <div class="report-chart-card report-full">
+              <h3>Структура расходов по подкатегориям</h3>
+              <div id="reportExpenseSubcategories" class="chart"></div>
+            </div>
+            <div class="report-chart-card report-full">
+              <h3>Структура доходов по подкатегориям</h3>
+              <div id="reportIncomeSubcategories" class="chart"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" data-view="capital">
+          <section class="card capital-shell">
+            <div class="capital-header">
+              <div>
+                <h2>Капитал</h2>
+                <p class="hint">Контроль активов, долгов, целей и динамики капитала в одном месте.</p>
+              </div>
+              <div class="capital-actions">
+                <button id="capitalExport" class="button secondary" type="button">Экспорт капитала (JSON)</button>
+                <label class="button secondary">
+                  Импорт капитала (JSON)
+                  <input id="capitalImport" type="file" accept="application/json" hidden />
+                </label>
+              </div>
+              <div class="capital-tabs">
+                <button class="chip is-active" data-capital-tab="overview">Обзор</button>
+                <button class="chip" data-capital-tab="assets">Активы</button>
+                <button class="chip" data-capital-tab="debts">Долги</button>
+                <button class="chip" data-capital-tab="goals">Цели</button>
+                <button class="chip" data-capital-tab="history">История</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="capital-tab is-active" data-capital-tab-panel="overview">
+            <section class="capital-overview">
+              <div class="capital-hero">
+                <div class="capital-hero-main">
+                  <span class="capital-hero-label">Общий капитал</span>
+                  <div class="capital-hero-value">
+                    <strong id="capitalOverviewTotal">0 ₽</strong>
+                    <span id="capitalOverviewDelta" class="capital-hero-delta">—</span>
+                  </div>
+                  <p class="hint">Динамика относительно прошлого месяца.</p>
+                </div>
+                <div class="capital-hero-stats">
+                  <div class="capital-stat">
+                    <span>Реальные деньги</span>
+                    <strong id="capitalOverviewReal">0 ₽</strong>
+                    <small>С учетом долгов</small>
+                  </div>
+                  <div class="capital-stat">
+                    <span>Долги</span>
+                    <strong id="capitalOverviewDebts">0 ₽</strong>
+                    <small>Кредиты и обязательства</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="capital-overview-panels">
+                <article class="capital-panel">
+                  <header class="capital-panel-header">
+                    <div>
+                      <h3>Активы</h3>
+                      <p class="hint">Самые крупные позиции.</p>
+                    </div>
+                    <span class="badge">В наличии</span>
+                  </header>
+                  <div id="capitalOverviewAssets" class="capital-overview-list"></div>
+                </article>
+
+                <article class="capital-panel">
+                  <header class="capital-panel-header">
+                    <div>
+                      <h3>Финансовые цели</h3>
+                      <p class="hint">Контроль ключевых планов.</p>
+                    </div>
+                    <span class="badge">Глобальные</span>
+                  </header>
+                  <div id="capitalOverviewGoals" class="capital-overview-list"></div>
+                </article>
+
+                <article class="capital-panel">
+                  <header class="capital-panel-header">
+                    <div>
+                      <h3>Динамика капитала</h3>
+                      <p class="hint">Последние месяцы.</p>
+                    </div>
+                    <span class="badge">Снимки</span>
+                  </header>
+                  <div id="capitalOverviewSnapshots" class="capital-overview-list"></div>
+                </article>
+
+                <article class="capital-panel">
+                  <header class="capital-panel-header">
+                    <div>
+                      <h3>Долги</h3>
+                      <p class="hint">Кредиты и обязательства.</p>
+                    </div>
+                    <span class="badge">Контроль</span>
+                  </header>
+                  <div id="capitalOverviewDebtsList" class="capital-overview-list"></div>
+                </article>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="assets">
+            <section class="card capital-grid">
+              <div class="capital-card capital-full">
+                <div class="capital-asset-header">
+                  <div>
+                    <h3>Активы под контролем</h3>
+                    <p class="hint">Переключайтесь между курсами и добавлением новых позиций без перегруженного меню.</p>
+                  </div>
+                  <button id="capitalAssetToggle" class="button primary" type="button" aria-expanded="false">
+                    Добавить новый актив
+                  </button>
+                </div>
+
+                <div class="capital-assets-layout">
+                  <div class="capital-assets-sidebar">
+                    <div class="capital-add-panel">
+                      <h4>Курс валюты</h4>
+                      <div class="form compact-form">
+                        <label>
+                          Базовая валюта
+                          <select id="capitalBaseCurrency">
+                            <option value="RUB">RUB</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        </label>
+                        <label>
+                          Валюта для курса
+                          <input type="text" id="capitalFxCurrency" placeholder="USD" maxlength="3" />
+                        </label>
+                        <button id="capitalFxRefresh" class="button secondary" type="button">Обновить курс</button>
+                      </div>
+                      <div class="capital-fx-summary">
+                        <strong id="capitalFxRateValue">—</strong>
+                        <span id="capitalFxUpdated" class="hint"></span>
+                      </div>
+                      <div class="capital-fx-chart">
+                        <svg id="capitalFxChart" viewBox="0 0 360 120" aria-label="График курса валюты"></svg>
+                      </div>
+                      <p id="capitalFxNote" class="hint"></p>
+                    </div>
+
+                  </div>
+
+                  <div class="capital-assets-main">
+                    <div id="capitalAssetOverlay" class="capital-asset-overlay"></div>
+                    <div id="capitalAssetDrawer" class="capital-asset-drawer">
+                      <form id="capitalAssetForm" class="capital-asset-form">
+                        <div class="capital-asset-columns">
+                          <div class="capital-asset-block">
+                            <h5>Основное</h5>
+                            <div class="capital-asset-fields">
+                              <label>
+                                Название
+                                <input type="text" id="capitalAssetName" placeholder="Например, Сбер вклад" required />
+                              </label>
+                              <label>
+                                Тип
+                                <select id="capitalAssetType">
+                                  <option value="cash">Наличные</option>
+                                  <option value="bank">Банк</option>
+                                  <option value="deposit">Вклад</option>
+                                  <option value="investment">Инвестиции</option>
+                                  <option value="real_estate">Недвижимость</option>
+                                  <option value="other">Другое</option>
+                                </select>
+                              </label>
+                              <label>
+                                Валюта
+                                <input type="text" id="capitalAssetCurrency" value="RUB" maxlength="3" />
+                              </label>
+                              <label>
+                                Сумма
+                                <input type="number" id="capitalAssetAmount" min="0" step="0.01" required />
+                              </label>
+                              <label>
+                                Вложено
+                                <input type="number" id="capitalAssetInvested" min="0" step="0.01" />
+                              </label>
+                            </div>
+                          </div>
+
+                          <div class="capital-asset-block">
+                            <h5>Категории</h5>
+                            <div class="capital-asset-fields">
+                              <label>
+                                Категория
+                                <input type="text" id="capitalAssetCategory" list="capitalCategoryList" placeholder="Например, Вклад" />
+                                <datalist id="capitalCategoryList"></datalist>
+                              </label>
+                              <label>
+                                Подкатегория
+                                <input type="text" id="capitalAssetSubcategory" list="capitalSubcategoryList" placeholder="Например, Сбербанк" />
+                                <datalist id="capitalSubcategoryList"></datalist>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div class="capital-asset-block">
+                            <h5>Сроки и ликвидность</h5>
+                            <div class="capital-asset-fields">
+                              <label>
+                                Дата окончания вклада
+                                <input type="date" id="capitalAssetMaturityDate" />
+                              </label>
+                              <label>
+                                Ликвидность
+                                <select id="capitalAssetLiquidity">
+                                  <option value="high">Можно вывести сразу</option>
+                                  <option value="medium">Нужно 1–3 дня</option>
+                                  <option value="low">Сложно/долго вывести</option>
+                                  <option value="locked">Заблокировано до даты</option>
+                                </select>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div class="capital-asset-block">
+                            <h5>Дополнительно</h5>
+                            <div class="capital-asset-fields">
+                              <label>
+                                Ожидаемая прибыль
+                                <input type="number" id="capitalAssetExpectedProfit" min="0" step="0.01" />
+                              </label>
+                              <label class="full">
+                                Комментарий
+                                <input type="text" id="capitalAssetNote" placeholder="Опционально" />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="capital-asset-actions">
+                          <button type="button" id="capitalAssetClose" class="button secondary">Закрыть</button>
+                          <button type="button" id="capitalAssetDelete" class="button danger">Удалить</button>
+                          <button type="submit" class="button primary">Добавить актив</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="capital-card capital-full">
+                <div class="chart-title">
+                  <h3>Список активов</h3>
+                </div>
+                <div class="capital-assets-view is-active">
+                  <div class="table-wrapper">
+                    <table class="capital-table capital-table-structured">
+                      <thead>
+                        <tr>
+                          <th>Название</th>
+                          <th>Тип</th>
+                          <th>Валюта</th>
+                          <th>Сумма</th>
+                          <th>Вложено</th>
+                          <th>Прибыль</th>
+                          <th>Дата окончания</th>
+                          <th>Потенц. доходность</th>
+                          <th>Ликвидность</th>
+                          <th>Комментарий</th>
+                        </tr>
+                      </thead>
+                      <tbody id="capitalAssetsTable"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="debts">
+            <section class="summary capital-summary">
+              <div class="summary-card neutral">
+                <span>Средняя ставка</span>
+                <strong id="capitalWeightedApr">0%</strong>
+              </div>
+              <div class="summary-card expense">
+                <span>Самый дорогой долг</span>
+                <strong id="capitalHighestApr">—</strong>
+              </div>
+              <div class="summary-card balance">
+                <span>Месячные проценты</span>
+                <strong id="capitalInterestMonthly">0 ₽</strong>
+              </div>
+            </section>
+
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Добавить долг</h3>
+                <form id="capitalDebtForm" class="form">
+                  <label>
+                    Название
+                    <input type="text" id="capitalDebtName" placeholder="Например, Кредитка" required />
+                  </label>
+                  <label>
+                    Тип
+                    <select id="capitalDebtType">
+                      <option value="credit_card">Кредитная карта</option>
+                      <option value="loan">Кредит</option>
+                      <option value="mortgage">Ипотека</option>
+                      <option value="personal">Личный долг</option>
+                      <option value="other">Другое</option>
+                    </select>
+                  </label>
+                  <label>
+                    Валюта
+                    <input type="text" id="capitalDebtCurrency" value="RUB" maxlength="3" />
+                  </label>
+                  <label>
+                    Остаток
+                    <input type="number" id="capitalDebtPrincipal" min="0" step="0.01" required />
+                  </label>
+                  <label>
+                    APR (%)
+                    <input type="number" id="capitalDebtApr" min="0" step="0.01" />
+                  </label>
+                  <label>
+                    Минимальный платеж
+                    <input type="number" id="capitalDebtPayment" min="0" step="0.01" />
+                  </label>
+                  <label>
+                    День платежа
+                    <input type="number" id="capitalDebtDueDay" min="1" max="31" step="1" />
+                  </label>
+                  <label class="full">
+                    Комментарий
+                    <input type="text" id="capitalDebtNote" placeholder="Опционально" />
+                  </label>
+                  <button type="submit" class="button secondary">Добавить долг</button>
+                </form>
+              </div>
+
+              <div class="capital-card">
+                <h3>План выплат</h3>
+                <div class="form compact-form">
+                  <label>
+                    Дополнительный платеж в месяц
+                    <input type="number" id="capitalExtraPayment" min="0" step="0.01" value="0" />
+                  </label>
+                  <p class="hint">Расчет приблизительный и основан на текущих ставках.</p>
+                </div>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Стратегия</th>
+                        <th>Долг</th>
+                        <th>Месяцев</th>
+                        <th>Комментарий</th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalPayoffTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Список долгов</h3>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Название</th>
+                        <th>Тип</th>
+                        <th>Валюта</th>
+                        <th>Остаток</th>
+                        <th>APR</th>
+                        <th>Мин. платеж</th>
+                        <th>День</th>
+                        <th>Комментарий</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalDebtsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="goals">
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <h3>Добавить цель</h3>
+                <form id="capitalGoalForm" class="form">
+                  <label>
+                    Название
+                    <input type="text" id="capitalGoalName" placeholder="Например, 3 млн капитала" required />
+                  </label>
+                  <label>
+                    Тип
+                    <select id="capitalGoalKind">
+                      <option value="netWorth">Чистый капитал</option>
+                      <option value="assetBucket">Актив (по типу)</option>
+                      <option value="debtPayoff">Погасить долг</option>
+                    </select>
+                  </label>
+                  <label>
+                    Целевая сумма
+                    <input type="number" id="capitalGoalTarget" min="0" step="0.01" required />
+                  </label>
+                  <label>
+                    Целевая дата
+                    <input type="month" id="capitalGoalDate" required />
+                  </label>
+                  <label>
+                    Базовая сумма
+                    <input type="number" id="capitalGoalBaseline" min="0" step="0.01" />
+                  </label>
+                  <label class="full">
+                    Комментарий
+                    <input type="text" id="capitalGoalNote" placeholder="Опционально" />
+                  </label>
+                  <button type="submit" class="button primary">Добавить цель</button>
+                </form>
+                <p class="hint">Для целей типа «Актив» в названии укажите тип (cash, bank, deposit).</p>
+              </div>
+
+              <div class="capital-card">
+                <h3>Мои цели</h3>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Цель</th>
+                        <th>Прогресс</th>
+                        <th>Нужно в месяц</th>
+                        <th>Статус</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalGoalsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="capital-tab" data-capital-tab-panel="history">
+            <section class="card capital-grid">
+              <div class="capital-card">
+                <div class="chart-title">
+                  <h3>Снимки капитала</h3>
+                  <button id="capitalSnapshotNow" class="chip">Создать снимок месяца</button>
+                </div>
+                <div class="line-chart">
+                  <svg id="capitalSnapshotsChart" viewBox="0 0 720 260" aria-label="График капитала"></svg>
+                </div>
+                <div class="table-wrapper">
+                  <table class="capital-table">
+                    <thead>
+                      <tr>
+                        <th>Месяц</th>
+                        <th>Активы</th>
+                        <th>Долги</th>
+                        <th>Капитал</th>
+                        <th>Δ</th>
+                        <th>Заметка</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="capitalSnapshotsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>Шаблон CSV для Excel: <a href="template.csv" download>скачать</a>.</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
