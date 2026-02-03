@@ -62,6 +62,13 @@ const capitalAssetTypePie = document.getElementById("capitalAssetTypePie");
 const capitalAssetTypeChart = document.getElementById("capitalAssetTypeChart");
 const capitalExportButton = document.getElementById("capitalExport");
 const capitalImportInput = document.getElementById("capitalImport");
+const capitalBaseCurrency = document.getElementById("capitalBaseCurrency");
+const capitalFxCurrency = document.getElementById("capitalFxCurrency");
+const capitalFxRefresh = document.getElementById("capitalFxRefresh");
+const capitalFxRateValue = document.getElementById("capitalFxRateValue");
+const capitalFxUpdated = document.getElementById("capitalFxUpdated");
+const capitalFxChart = document.getElementById("capitalFxChart");
+const capitalFxNote = document.getElementById("capitalFxNote");
 const capitalAssetForm = document.getElementById("capitalAssetForm");
 const capitalAssetName = document.getElementById("capitalAssetName");
 const capitalAssetType = document.getElementById("capitalAssetType");
@@ -82,8 +89,6 @@ const capitalAssetNote = document.getElementById("capitalAssetNote");
 const capitalAssetsTable = document.getElementById("capitalAssetsTable");
 const capitalAssetViewButtons = document.querySelectorAll("[data-capital-asset-view]");
 const capitalAssetPanels = document.querySelectorAll("[data-capital-asset-panel]");
-const capitalAssetsCards = document.getElementById("capitalAssetsCards");
-const capitalAssetsCompact = document.getElementById("capitalAssetsCompact");
 const capitalCategoryForm = document.getElementById("capitalCategoryForm");
 const capitalCategoryName = document.getElementById("capitalCategoryName");
 const capitalSubcategoryName = document.getElementById("capitalSubcategoryName");
@@ -1016,6 +1021,123 @@ const capitalToBase = (value, currency) => {
   return value * rate;
 };
 
+const capitalFxEndpoint = "https://api.exchangerate.host";
+
+const capitalFetchRate = async (base, currency) => {
+  const url = `${capitalFxEndpoint}/latest?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(currency)}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("FX fetch failed");
+  }
+  const data = await response.json();
+  const rate = data?.rates?.[currency];
+  if (!rate) {
+    throw new Error("No rate");
+  }
+  return rate;
+};
+
+const capitalFetchSeries = async (base, currency) => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 29);
+  const startDate = start.toISOString().slice(0, 10);
+  const endDate = end.toISOString().slice(0, 10);
+  const url = `${capitalFxEndpoint}/timeseries?base=${encodeURIComponent(base)}&symbols=${encodeURIComponent(currency)}&start_date=${startDate}&end_date=${endDate}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("FX series fetch failed");
+  }
+  const data = await response.json();
+  const entries = Object.entries(data?.rates || {}).sort(([a], [b]) => a.localeCompare(b));
+  return entries.map(([date, rates]) => ({ date, value: rates[currency] })).filter((item) => item.value);
+};
+
+const renderFxChart = (series) => {
+  if (!capitalFxChart) {
+    return;
+  }
+  capitalFxChart.innerHTML = "";
+  if (!series.length) {
+    return;
+  }
+  const values = series.map((item) => item.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const width = 360;
+  const height = 120;
+  const pad = 12;
+  const scaleX = (index) => pad + (index / (series.length - 1 || 1)) * (width - pad * 2);
+  const scaleY = (value) => {
+    if (max === min) {
+      return height / 2;
+    }
+    const ratio = (value - min) / (max - min);
+    return height - pad - ratio * (height - pad * 2);
+  };
+  const path = series
+    .map((item, index) => `${index === 0 ? "M" : "L"}${scaleX(index)},${scaleY(item.value)}`)
+    .join(" ");
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  line.setAttribute("d", path);
+  line.setAttribute("fill", "none");
+  line.setAttribute("stroke", "#2563eb");
+  line.setAttribute("stroke-width", "2");
+  const area = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  area.setAttribute("d", `${path} L${scaleX(series.length - 1)},${height - pad} L${scaleX(0)},${height - pad} Z`);
+  area.setAttribute("fill", "rgba(37, 99, 235, 0.12)");
+  capitalFxChart.appendChild(area);
+  capitalFxChart.appendChild(line);
+};
+
+const refreshFxRate = async () => {
+  if (!capitalBaseCurrency || !capitalFxCurrency) {
+    return;
+  }
+  const base = capitalBaseCurrency.value.trim().toUpperCase() || "RUB";
+  const currency = capitalFxCurrency.value.trim().toUpperCase();
+  if (!currency || currency === base) {
+    capitalFxRateValue.textContent = "—";
+    capitalFxUpdated.textContent = "";
+    capitalFxNote.textContent = "";
+    renderFxChart([]);
+    return;
+  }
+  capitalFxNote.textContent = "Загружаем курс...";
+  try {
+    const rate = await capitalFetchRate(base, currency);
+    capitalState.settings.baseCurrency = base;
+    capitalState.settings.fxRates[currency] = rate;
+    saveCapitalV2(capitalState);
+    capitalFxRateValue.textContent = rate.toFixed(4);
+    capitalFxUpdated.textContent = `на ${new Date().toLocaleDateString("ru-RU")}`;
+    capitalFxNote.textContent = "";
+    const series = await capitalFetchSeries(base, currency);
+    renderFxChart(series);
+    renderCapitalView();
+  } catch (error) {
+    capitalFxNote.textContent = "Не удалось обновить курс. Проверьте соединение.";
+  }
+};
+
+const ensureFxRateForCurrency = async (currency) => {
+  const base = capitalState.settings.baseCurrency;
+  const normalized = currency.trim().toUpperCase();
+  if (!normalized || normalized === base) {
+    return;
+  }
+  if (capitalState.settings.fxRates[normalized]) {
+    return;
+  }
+  try {
+    const rate = await capitalFetchRate(base, normalized);
+    capitalState.settings.fxRates[normalized] = rate;
+    saveCapitalV2(capitalState);
+  } catch (error) {
+    // silent: rate can be missing
+  }
+};
+
 const capitalTotals = () => {
   const missingRates = [];
   const assetsTotal = capitalState.assets.reduce((sum, item) => {
@@ -1407,8 +1529,6 @@ const renderCapitalAssets = () => {
     const row = document.createElement("tr");
     row.innerHTML = "<td colspan='15' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
-    capitalAssetsCards.innerHTML = "<p class='hint'>Добавьте первый актив.</p>";
-    capitalAssetsCompact.innerHTML = "<li class='hint'>Добавьте первый актив.</li>";
     return;
   }
   const grouped = new Map();
@@ -1503,36 +1623,6 @@ const renderCapitalAssets = () => {
     });
   });
 
-  capitalAssetsCards.innerHTML = "";
-  capitalAssetsCompact.innerHTML = "";
-  items.forEach((item) => {
-    const invested = item.invested ?? 0;
-    const profit = item.amount - invested;
-    const card = document.createElement("div");
-    card.className = "capital-card-item";
-    const amountInBase = capitalToBase(item.amount, item.currency);
-    const amountLabel = amountInBase == null && capitalIsUnconvertible(item)
-      ? `нет курса для ${item.currency}`
-      : capitalFormatMoney(amountInBase ?? item.amount);
-    card.innerHTML = `
-      <h4>${item.name}</h4>
-      <div class="capital-card-meta">
-        <span>Тип: ${capitalTypeLabel(item.type)}</span>
-        <span>Сумма: ${amountLabel}</span>
-        <span>Вложено: ${invested.toFixed(2)} ${item.currency}</span>
-        <span>Прибыль: ${profit.toFixed(2)} ${item.currency}</span>
-        <span>Категория: ${item.category || "—"}</span>
-        <span>Подкатегория: ${item.subcategory || "—"}</span>
-        <span>Доступно до: ${item.maturityDate || "в любое время"}</span>
-        <span>Ликвидность: ${capitalLiquidityLabel(item.liquidity)}</span>
-      </div>
-    `;
-    capitalAssetsCards.appendChild(card);
-
-    const compact = document.createElement("li");
-    compact.innerHTML = `<span>${item.name}</span><strong>${amountLabel}</strong>`;
-    capitalAssetsCompact.appendChild(compact);
-  });
 };
 
 const debtMetrics = () => {
@@ -1832,6 +1922,17 @@ const renderCapitalView = () => {
     option.value = section;
     capitalSectionList.appendChild(option);
   });
+  if (capitalBaseCurrency) {
+    capitalBaseCurrency.value = capitalState.settings.baseCurrency;
+  }
+  if (capitalFxCurrency) {
+    if (!capitalFxCurrency.value) {
+      const existing = Object.keys(capitalState.settings.fxRates || {})[0];
+      capitalFxCurrency.value = existing || "USD";
+    }
+    const rate = capitalState.settings.fxRates[capitalFxCurrency.value.trim().toUpperCase()];
+    capitalFxRateValue.textContent = rate ? rate.toFixed(4) : "—";
+  }
   renderCapitalCategories();
 };
 
@@ -1852,6 +1953,7 @@ const capitalUpdateAsset = (id, field, value) => {
   let refreshCategories = false;
   if (field === "currency") {
     asset[field] = value.trim().toUpperCase();
+    ensureFxRateForCurrency(asset[field]);
   } else if (field === "amount" || field === "invested") {
     asset[field] = Number.parseFloat(value) || 0;
   } else if (field === "expectedProfit") {
@@ -1948,6 +2050,7 @@ const capitalAddAsset = () => {
     note: capitalAssetNote.value.trim(),
     updatedAt: capitalNowIso(),
   });
+  ensureFxRateForCurrency(capitalState.assets[capitalState.assets.length - 1].currency);
   capitalState.assets[capitalState.assets.length - 1].unconvertible = capitalIsUnconvertible(
     capitalState.assets[capitalState.assets.length - 1]
   );
@@ -2669,6 +2772,37 @@ capitalAssetForm.addEventListener("submit", (event) => {
   capitalAddAsset();
 });
 
+if (capitalBaseCurrency) {
+  capitalBaseCurrency.addEventListener("change", () => {
+    capitalState.settings.baseCurrency = capitalBaseCurrency.value;
+    saveCapitalV2(capitalState);
+    renderCapitalView();
+    refreshFxRate();
+  });
+}
+
+if (capitalFxRefresh) {
+  capitalFxRefresh.addEventListener("click", () => {
+    refreshFxRate();
+  });
+}
+
+if (capitalFxCurrency) {
+  capitalFxCurrency.addEventListener("blur", () => {
+    refreshFxRate();
+  });
+}
+
+if (capitalAssetCurrency && capitalFxCurrency) {
+  capitalAssetCurrency.addEventListener("blur", () => {
+    const currency = capitalAssetCurrency.value.trim().toUpperCase();
+    if (currency) {
+      capitalFxCurrency.value = currency;
+      refreshFxRate();
+    }
+  });
+}
+
 capitalStructureButtons.forEach((button) => {
   button.addEventListener("click", () => {
     capitalStructureButtons.forEach((item) => item.classList.remove("is-active"));
@@ -2679,15 +2813,17 @@ capitalStructureButtons.forEach((button) => {
   });
 });
 
-capitalAssetViewButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    capitalAssetViewButtons.forEach((item) => item.classList.remove("is-active"));
-    button.classList.add("is-active");
-    capitalAssetPanels.forEach((panel) => {
-      panel.classList.toggle("is-active", panel.dataset.capitalAssetPanel === button.dataset.capitalAssetView);
+if (capitalAssetViewButtons.length) {
+  capitalAssetViewButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      capitalAssetViewButtons.forEach((item) => item.classList.remove("is-active"));
+      button.classList.add("is-active");
+      capitalAssetPanels.forEach((panel) => {
+        panel.classList.toggle("is-active", panel.dataset.capitalAssetPanel === button.dataset.capitalAssetView);
+      });
     });
   });
-});
+}
 
 if (capitalCategoryForm) {
   capitalCategoryForm.addEventListener("submit", (event) => {

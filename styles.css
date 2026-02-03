@@ -1030,6 +1030,25 @@ td {
   gap: 12px;
 }
 
+.capital-fx-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 18px;
+}
+
+.capital-fx-chart {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.capital-fx-chart svg {
+  width: 100%;
+  height: 120px;
+}
+
 .capital-category-card {
   background: #fff;
   border-radius: 12px;
@@ -1087,6 +1106,39 @@ td {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
+}
+
+.capital-table-structured {
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+.capital-table-structured thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 0 12px 8px;
+  border-bottom: none;
+}
+
+.capital-table-structured tbody tr:not(.capital-table-section):not(.capital-table-subsection) td {
+  background: #fff;
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 10px 12px;
+}
+
+.capital-table-structured tbody tr:not(.capital-table-section):not(.capital-table-subsection) td:first-child {
+  border-left: 1px solid rgba(226, 232, 240, 0.9);
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.capital-table-structured tbody tr:not(.capital-table-section):not(.capital-table-subsection) td:last-child {
+  border-right: 1px solid rgba(226, 232, 240, 0.9);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .capital-badges {
