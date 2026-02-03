@@ -86,9 +86,7 @@ const capitalAssetType = document.getElementById("capitalAssetType");
 const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
 const capitalAssetAmount = document.getElementById("capitalAssetAmount");
 const capitalAssetInvested = document.getElementById("capitalAssetInvested");
-const capitalAssetCategory = document.getElementById("capitalAssetCategory");
 const capitalAssetSubcategory = document.getElementById("capitalAssetSubcategory");
-const capitalCategoryList = document.getElementById("capitalCategoryList");
 const capitalSubcategoryList = document.getElementById("capitalSubcategoryList");
 const capitalAssetMaturityDate = document.getElementById("capitalAssetMaturityDate");
 const capitalAssetLiquidity = document.getElementById("capitalAssetLiquidity");
@@ -1677,14 +1675,10 @@ const renderCapitalCategories = () => {
     return;
   }
   capitalCategoryManager.innerHTML = "";
-  capitalCategoryList.innerHTML = "";
   capitalSubcategoryList.innerHTML = "";
 
   const sorted = capitalizeAssetCategories();
   sorted.forEach((category) => {
-    const option = document.createElement("option");
-    option.value = category.name;
-    capitalCategoryList.appendChild(option);
     category.subs.forEach((sub) => {
       const subOption = document.createElement("option");
       subOption.value = sub;
@@ -1730,7 +1724,7 @@ const renderCapitalAssets = () => {
   }
   const grouped = new Map();
   items.forEach((item) => {
-    const category = item.category || "Без категории";
+    const category = capitalTypeLabel(item.type) || item.category || "Без категории";
     if (!grouped.has(category)) {
       grouped.set(category, new Map());
     }
@@ -2215,7 +2209,6 @@ const capitalResetAssetForm = () => {
   capitalAssetForm.reset();
   capitalAssetCurrency.value = capitalState.settings.baseCurrency;
   capitalAssetMaturityDate.value = "";
-  capitalAssetCategory.value = "";
   capitalAssetSubcategory.value = "";
   capitalAssetExpectedProfit.value = "";
   capitalEditingAssetId = null;
@@ -2236,7 +2229,6 @@ const capitalFillAssetForm = (asset) => {
   capitalAssetCurrency.value = asset.currency || capitalState.settings.baseCurrency;
   capitalAssetAmount.value = asset.amount ?? 0;
   capitalAssetInvested.value = asset.invested ?? asset.amount ?? 0;
-  capitalAssetCategory.value = asset.category || "";
   capitalAssetSubcategory.value = asset.subcategory || "";
   capitalAssetMaturityDate.value = asset.maturityDate || "";
   capitalAssetLiquidity.value = asset.liquidity || "high";
@@ -2254,15 +2246,17 @@ const capitalFillAssetForm = (asset) => {
 
 const capitalAddAsset = () => {
   const name = capitalAssetName.value.trim();
-  const amount = Number.parseFloat(capitalAssetAmount.value);
-  if (!name || Number.isNaN(amount)) {
+  const amountInput = capitalAssetAmount.value;
+  const investedInput = capitalAssetInvested.value;
+  const invested = Number.parseFloat(investedInput);
+  if (!name || Number.isNaN(invested)) {
     return;
   }
-  const invested = capitalAssetInvested.value ? Number.parseFloat(capitalAssetInvested.value) : amount;
-  const categoryValue = capitalAssetCategory.value.trim();
   const subcategoryValue = capitalAssetSubcategory.value.trim();
   const isDeposit = capitalAssetType.value === "deposit";
-  const resolvedCategory = categoryValue || (isDeposit ? "Вклады" : "В наличии");
+  const amountParsed = Number.parseFloat(amountInput);
+  const amount = Number.isNaN(amountParsed) ? invested : amountParsed;
+  const resolvedCategory = capitalTypeLabel(capitalAssetType.value);
   if (resolvedCategory) {
     capitalEnsureCategory(resolvedCategory, subcategoryValue);
   }
@@ -2271,7 +2265,7 @@ const capitalAddAsset = () => {
     type: capitalAssetType.value,
     currency: capitalAssetCurrency.value.trim().toUpperCase() || capitalState.settings.baseCurrency,
     amount,
-    invested: Number.isNaN(invested) ? amount : invested,
+    invested,
     section: isDeposit ? "Вклады" : "В наличии",
     category: resolvedCategory,
     subcategory: subcategoryValue,
@@ -3105,7 +3099,7 @@ if (capitalFxCurrency) {
 }
 
 if (capitalAssetCurrency && capitalFxCurrency) {
-  capitalAssetCurrency.addEventListener("blur", () => {
+  capitalAssetCurrency.addEventListener("change", () => {
     const currency = capitalAssetCurrency.value.trim().toUpperCase();
     if (currency) {
       capitalFxCurrency.value = currency;

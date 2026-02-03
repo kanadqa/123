@@ -474,7 +474,7 @@
                                 <input type="text" id="capitalAssetName" placeholder="Например, Сбер вклад" required />
                               </label>
                               <label>
-                                Тип
+                                Категория
                                 <select id="capitalAssetType">
                                   <option value="cash">Наличные</option>
                                   <option value="bank">Банк</option>
@@ -485,32 +485,26 @@
                                 </select>
                               </label>
                               <label>
-                                Валюта
-                                <input type="text" id="capitalAssetCurrency" value="RUB" maxlength="3" />
-                              </label>
-                              <label>
-                                Сумма
-                                <input type="number" id="capitalAssetAmount" min="0" step="0.01" required />
-                              </label>
-                              <label>
-                                Вложено
-                                <input type="number" id="capitalAssetInvested" min="0" step="0.01" />
-                              </label>
-                            </div>
-                          </div>
-
-                          <div class="capital-asset-block">
-                            <h5>Категории</h5>
-                            <div class="capital-asset-fields">
-                              <label>
-                                Категория
-                                <input type="text" id="capitalAssetCategory" list="capitalCategoryList" placeholder="Например, Вклад" />
-                                <datalist id="capitalCategoryList"></datalist>
-                              </label>
-                              <label>
                                 Подкатегория
                                 <input type="text" id="capitalAssetSubcategory" list="capitalSubcategoryList" placeholder="Например, Сбербанк" />
                                 <datalist id="capitalSubcategoryList"></datalist>
+                              </label>
+                              <label>
+                                Валюта
+                                <select id="capitalAssetCurrency">
+                                  <option value="RUB">RUB</option>
+                                  <option value="USD">USD</option>
+                                  <option value="EUR">EUR</option>
+                                  <option value="CNY">CNY</option>
+                                </select>
+                              </label>
+                              <label>
+                                Сумма (опционально)
+                                <input type="number" id="capitalAssetAmount" min="0" step="0.01" />
+                              </label>
+                              <label>
+                                Вложено
+                                <input type="number" id="capitalAssetInvested" min="0" step="0.01" required />
                               </label>
                             </div>
                           </div>
