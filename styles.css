@@ -81,6 +81,8 @@ body {
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
+  text-decoration: none;
+  display: block;
 }
 
 .nav-link.is-active,
@@ -1405,6 +1407,14 @@ td {
   border-right: 1px solid rgba(226, 232, 240, 0.9);
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
+}
+
+.capital-asset-row {
+  cursor: pointer;
+}
+
+.capital-asset-row:hover td {
+  background: #f8fafc;
 }
 
 .capital-badges {

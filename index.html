@@ -18,11 +18,11 @@
       </div>
 
       <nav class="nav">
-        <button class="nav-link is-active" data-view-target="dashboard">Обзор</button>
-        <button class="nav-link" data-view-target="transactions">Операции</button>
-        <button class="nav-link" data-view-target="categories">Категории</button>
-        <button class="nav-link" data-view-target="reports">Отчеты</button>
-        <button class="nav-link" data-view-target="capital">Капитал</button>
+        <a class="nav-link is-active" href="index.html" data-view-target="dashboard">Обзор</a>
+        <a class="nav-link" href="index.html" data-view-target="transactions">Операции</a>
+        <a class="nav-link" href="index.html" data-view-target="categories">Категории</a>
+        <a class="nav-link" href="index.html" data-view-target="reports">Отчеты</a>
+        <a class="nav-link" href="capital.html" data-view-target="capital">Капитал</a>
       </nav>
 
       <div class="layout-picker">
@@ -457,11 +457,6 @@
                     <input type="number" id="capitalAssetInvested" min="0" step="0.01" />
                   </label>
                   <label>
-                    Секция
-                    <input type="text" id="capitalAssetSection" list="capitalSectionList" placeholder="В наличии" />
-                    <datalist id="capitalSectionList"></datalist>
-                  </label>
-                  <label>
                     Категория
                     <input type="text" id="capitalAssetCategory" list="capitalCategoryList" placeholder="Например, Вклад" />
                     <datalist id="capitalCategoryList"></datalist>
@@ -472,7 +467,7 @@
                     <datalist id="capitalSubcategoryList"></datalist>
                   </label>
                   <label>
-                    Доступно до
+                    Дата окончания вклада
                     <input type="date" id="capitalAssetMaturityDate" />
                   </label>
                   <label>
@@ -483,10 +478,6 @@
                       <option value="low">Сложно/долго вывести</option>
                       <option value="locked">Заблокировано до даты</option>
                     </select>
-                  </label>
-                  <label>
-                    Дней на вывод
-                    <input type="number" id="capitalAssetLiquidityDays" min="0" step="1" />
                   </label>
                   <label>
                     Ожидаемая прибыль (вклад)
@@ -517,9 +508,6 @@
                           <th>Сумма</th>
                           <th>Вложено</th>
                           <th>Прибыль</th>
-                          <th>Секция</th>
-                          <th>Категория</th>
-                          <th>Подкатегория</th>
                           <th>Дата окончания</th>
                           <th>Потенц. доходность</th>
                           <th>Ликвидность</th>

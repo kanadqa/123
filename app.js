@@ -85,15 +85,12 @@ const capitalAssetType = document.getElementById("capitalAssetType");
 const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
 const capitalAssetAmount = document.getElementById("capitalAssetAmount");
 const capitalAssetInvested = document.getElementById("capitalAssetInvested");
-const capitalAssetSection = document.getElementById("capitalAssetSection");
 const capitalAssetCategory = document.getElementById("capitalAssetCategory");
 const capitalAssetSubcategory = document.getElementById("capitalAssetSubcategory");
-const capitalSectionList = document.getElementById("capitalSectionList");
 const capitalCategoryList = document.getElementById("capitalCategoryList");
 const capitalSubcategoryList = document.getElementById("capitalSubcategoryList");
 const capitalAssetMaturityDate = document.getElementById("capitalAssetMaturityDate");
 const capitalAssetLiquidity = document.getElementById("capitalAssetLiquidity");
-const capitalAssetLiquidityDays = document.getElementById("capitalAssetLiquidityDays");
 const capitalAssetExpectedProfit = document.getElementById("capitalAssetExpectedProfit");
 const capitalAssetNote = document.getElementById("capitalAssetNote");
 const capitalAssetsTable = document.getElementById("capitalAssetsTable");
@@ -1724,13 +1721,13 @@ const renderCapitalAssets = () => {
   const items = capitalState.assets;
   if (!items.length) {
     const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='14' class='hint'>Добавьте первый актив.</td>";
+    row.innerHTML = "<td colspan='11' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
     return;
   }
   const grouped = new Map();
   items.forEach((item) => {
-    const category = item.category || item.section || "В наличии";
+    const category = item.category || "Без категории";
     if (!grouped.has(category)) {
       grouped.set(category, new Map());
     }
@@ -1744,6 +1741,7 @@ const renderCapitalAssets = () => {
   const buildAssetRow = (item) => {
     const row = document.createElement("tr");
     row.dataset.assetId = item.id;
+    row.classList.add("capital-asset-row");
     const invested = item.invested ?? 0;
     const profit = item.amount - invested;
     const amountInBase = capitalToBase(item.amount, item.currency);
@@ -1769,9 +1767,6 @@ const renderCapitalAssets = () => {
       </td>
       <td>${invested.toFixed(2)}</td>
       <td>${profit.toFixed(2)}</td>
-      <td>${item.section || "—"}</td>
-      <td>${item.category || "—"}</td>
-      <td>${item.subcategory || "—"}</td>
       <td>${item.maturityDate || "—"}</td>
       <td>
         ${item.expectedProfit != null ? item.expectedProfit.toFixed(2) : "—"}
@@ -1787,13 +1782,13 @@ const renderCapitalAssets = () => {
   grouped.forEach((subcategories, categoryName) => {
     const categoryRow = document.createElement("tr");
     categoryRow.className = "capital-table-section";
-    categoryRow.innerHTML = `<td colspan="14">${categoryName}</td>`;
+    categoryRow.innerHTML = `<td colspan="11">${categoryName}</td>`;
     capitalAssetsTable.appendChild(categoryRow);
 
     subcategories.forEach((assets, subcategoryName) => {
       const subRow = document.createElement("tr");
       subRow.className = "capital-table-subsection";
-      subRow.innerHTML = `<td colspan="14">${subcategoryName}</td>`;
+      subRow.innerHTML = `<td colspan="11">${subcategoryName}</td>`;
       capitalAssetsTable.appendChild(subRow);
       assets.forEach((asset) => {
         capitalAssetsTable.appendChild(buildAssetRow(asset));
@@ -2090,14 +2085,6 @@ const renderCapitalView = () => {
   renderCapitalGoals();
   renderCapitalSnapshots();
   renderCapitalHistoryChart();
-
-  const sections = [...new Set(capitalState.assets.map((asset) => asset.section).filter(Boolean))];
-  capitalSectionList.innerHTML = "";
-  sections.forEach((section) => {
-    const option = document.createElement("option");
-    option.value = section;
-    capitalSectionList.appendChild(option);
-  });
   if (capitalBaseCurrency) {
     capitalBaseCurrency.value = capitalState.settings.baseCurrency;
   }
@@ -2211,11 +2198,9 @@ const capitalResetAssetForm = () => {
   capitalAssetForm.reset();
   capitalAssetCurrency.value = capitalState.settings.baseCurrency;
   capitalAssetMaturityDate.value = "";
-  capitalAssetSection.value = "";
   capitalAssetCategory.value = "";
   capitalAssetSubcategory.value = "";
   capitalAssetExpectedProfit.value = "";
-  capitalAssetLiquidityDays.value = "";
   capitalEditingAssetId = null;
   const submitButton = capitalAssetForm.querySelector('button[type="submit"]');
   if (submitButton) {
@@ -2230,12 +2215,10 @@ const capitalFillAssetForm = (asset) => {
   capitalAssetCurrency.value = asset.currency || capitalState.settings.baseCurrency;
   capitalAssetAmount.value = asset.amount ?? 0;
   capitalAssetInvested.value = asset.invested ?? asset.amount ?? 0;
-  capitalAssetSection.value = asset.section || "";
   capitalAssetCategory.value = asset.category || "";
   capitalAssetSubcategory.value = asset.subcategory || "";
   capitalAssetMaturityDate.value = asset.maturityDate || "";
   capitalAssetLiquidity.value = asset.liquidity || "high";
-  capitalAssetLiquidityDays.value = asset.liquidityDays ?? "";
   capitalAssetExpectedProfit.value = asset.expectedProfit ?? "";
   capitalAssetNote.value = asset.note || "";
   capitalEditingAssetId = asset.id;
@@ -2252,11 +2235,10 @@ const capitalAddAsset = () => {
     return;
   }
   const invested = capitalAssetInvested.value ? Number.parseFloat(capitalAssetInvested.value) : amount;
-  const sectionValue = capitalAssetSection.value.trim();
   const categoryValue = capitalAssetCategory.value.trim();
   const subcategoryValue = capitalAssetSubcategory.value.trim();
   const isDeposit = capitalAssetType.value === "deposit";
-  const resolvedCategory = categoryValue || sectionValue || (isDeposit ? "Вклады" : "В наличии");
+  const resolvedCategory = categoryValue || (isDeposit ? "Вклады" : "В наличии");
   if (resolvedCategory) {
     capitalEnsureCategory(resolvedCategory, subcategoryValue);
   }
@@ -2266,11 +2248,10 @@ const capitalAddAsset = () => {
     currency: capitalAssetCurrency.value.trim().toUpperCase() || capitalState.settings.baseCurrency,
     amount,
     invested: Number.isNaN(invested) ? amount : invested,
-    section: sectionValue || (isDeposit ? "Вклады" : "В наличии"),
+    section: isDeposit ? "Вклады" : "В наличии",
     category: resolvedCategory,
     subcategory: subcategoryValue,
     liquidity: capitalAssetLiquidity.value,
-    liquidityDays: capitalAssetLiquidityDays.value ? Number.parseInt(capitalAssetLiquidityDays.value, 10) : null,
     expectedProfit: isDeposit && capitalAssetExpectedProfit.value
       ? Number.parseFloat(capitalAssetExpectedProfit.value)
       : null,
@@ -2861,7 +2842,10 @@ newSubcategoryInput.addEventListener("keydown", (event) => {
 });
 
 navLinks.forEach((link) => {
-  link.addEventListener("click", () => setView(link.dataset.viewTarget));
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    setView(link.dataset.viewTarget);
+  });
 });
 
 layoutButtons.forEach((button) => {
@@ -3154,8 +3138,19 @@ capitalAssetType.addEventListener("change", () => {
   }
 });
 
-capitalAssetsTable.addEventListener("dblclick", (event) => {
-  const row = event.target.closest("tr");
+capitalAssetsTable.addEventListener("click", (event) => {
+  const target = event.target;
+  if (target instanceof HTMLButtonElement) {
+    const id = target.dataset.assetDelete;
+    if (!id || !confirm("Удалить актив?")) {
+      return;
+    }
+    capitalState.assets = capitalState.assets.filter((item) => item.id !== id);
+    saveCapitalV2(capitalState);
+    renderCapitalView();
+    return;
+  }
+  const row = target.closest("tr");
   if (!row || !row.dataset.assetId) {
     return;
   }
@@ -3165,20 +3160,6 @@ capitalAssetsTable.addEventListener("dblclick", (event) => {
   }
   capitalFillAssetForm(asset);
   capitalAssetForm.scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-capitalAssetsTable.addEventListener("click", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLButtonElement)) {
-    return;
-  }
-  const id = target.dataset.assetDelete;
-  if (!id || !confirm("Удалить актив?")) {
-    return;
-  }
-  capitalState.assets = capitalState.assets.filter((item) => item.id !== id);
-  saveCapitalV2(capitalState);
-  renderCapitalView();
 });
 
 capitalDebtForm.addEventListener("submit", (event) => {
