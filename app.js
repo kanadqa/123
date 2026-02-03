@@ -3065,9 +3065,15 @@ capitalTabs.forEach((tab) => {
 
 if (capitalAssetToggle) {
   capitalAssetToggle.addEventListener("click", () => {
-    capitalSetAssetDrawer(!capitalAssetDrawer.classList.contains("is-open"));
-    if (capitalAssetDrawer.classList.contains("is-open")) {
+    const shouldOpen = !capitalAssetDrawer.classList.contains("is-open");
+    if (shouldOpen) {
+      capitalResetAssetForm();
+      capitalSetAssetDrawer(true);
+      capitalSetAssetModal(true);
       capitalAssetDrawer.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      capitalSetAssetModal(false);
+      capitalSetAssetDrawer(false);
     }
   });
 }
@@ -3075,9 +3081,15 @@ if (capitalAssetToggle) {
 if (capitalAssetToggleButtons.length) {
   capitalAssetToggleButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      capitalSetAssetDrawer(!capitalAssetDrawer.classList.contains("is-open"));
-      if (capitalAssetDrawer.classList.contains("is-open")) {
+      const shouldOpen = !capitalAssetDrawer.classList.contains("is-open");
+      if (shouldOpen) {
+        capitalResetAssetForm();
+        capitalSetAssetDrawer(true);
+        capitalSetAssetModal(true);
         capitalAssetDrawer.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        capitalSetAssetModal(false);
+        capitalSetAssetDrawer(false);
       }
     });
   });
