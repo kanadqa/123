@@ -309,6 +309,10 @@ let reportRange = { start: "", end: "" };
 let capitalState = migrateCapitalState();
 let capitalOverviewFilter = "all";
 
+const capitalIsUnconvertible = (asset) =>
+  asset.currency !== capitalState.settings.baseCurrency
+  && !capitalState.settings.fxRates[asset.currency];
+
 const normalizeCapitalState = () => {
   capitalState.settings = capitalState.settings || { baseCurrency: "RUB", fxRates: {} };
   capitalState.settings.baseCurrency = capitalState.settings.baseCurrency || "RUB";
@@ -324,9 +328,14 @@ const normalizeCapitalState = () => {
       liquidityDays: asset.liquidityDays ?? null,
       expectedProfit: isDeposit ? (asset.expectedProfit ?? null) : null,
       maturityDate,
+      unconvertible: asset.unconvertible ?? false,
       ...asset,
     };
   });
+  capitalState.assets = capitalState.assets.map((asset) => ({
+    ...asset,
+    unconvertible: capitalIsUnconvertible(asset),
+  }));
   capitalState.debts = capitalState.debts || [];
   capitalState.goals = capitalState.goals || [];
   capitalState.snapshots = capitalState.snapshots || [];
@@ -973,7 +982,7 @@ const capitalTotals = () => {
   const missingRates = [];
   const assetsTotal = capitalState.assets.reduce((sum, item) => {
     const converted = capitalToBase(item.amount, item.currency);
-    if (converted == null && item.currency !== capitalState.settings.baseCurrency) {
+    if (converted == null && capitalIsUnconvertible(item)) {
       missingRates.push(item.currency);
       return sum;
     }
@@ -1080,7 +1089,7 @@ const renderCapitalLedger = () => {
 
       assets.forEach((asset) => {
         const converted = capitalToBase(asset.amount, asset.currency);
-        const hasRate = converted != null || asset.currency === capitalState.settings.baseCurrency;
+        const hasRate = converted != null || !capitalIsUnconvertible(asset);
         const amountLabel = hasRate
           ? capitalFormatShort(converted ?? asset.amount)
           : `нет курса для ${asset.currency}`;
@@ -1118,7 +1127,7 @@ const renderCapitalStructureCharts = () => {
   });
   const assetTotals = capitalState.assets.reduce((acc, item) => {
     const converted = capitalToBase(item.amount, item.currency);
-    if (converted == null && item.currency !== capitalState.settings.baseCurrency) {
+    if (converted == null && capitalIsUnconvertible(item)) {
       return acc;
     }
     acc[item.type] = (acc[item.type] || 0) + (converted ?? item.amount);
@@ -1197,7 +1206,7 @@ const renderCapitalOverview = () => {
       amountValue.className = "capital-overview-amount";
 
       const converted = capitalToBase(asset.amount, asset.currency);
-      const hasRate = converted != null || asset.currency === baseCurrency;
+      const hasRate = converted != null || !capitalIsUnconvertible(asset);
       if (hasRate) {
         const amount = converted ?? asset.amount;
         amountValue.textContent = formatter.format(amount);
@@ -1636,6 +1645,7 @@ const capitalUpdateAsset = (id, field, value) => {
   } else {
     asset[field] = value;
   }
+  asset.unconvertible = capitalIsUnconvertible(asset);
   asset.updatedAt = capitalNowIso();
   saveCapitalV2(capitalState);
   renderCapitalSummary();
@@ -1700,6 +1710,9 @@ const capitalAddAsset = () => {
     note: capitalAssetNote.value.trim(),
     updatedAt: capitalNowIso(),
   });
+  capitalState.assets[capitalState.assets.length - 1].unconvertible = capitalIsUnconvertible(
+    capitalState.assets[capitalState.assets.length - 1]
+  );
   saveCapitalV2(capitalState);
   capitalAssetForm.reset();
   capitalAssetCurrency.value = capitalState.settings.baseCurrency;
@@ -2444,6 +2457,28 @@ capitalAssetType.addEventListener("change", () => {
   }
 });
 
+const assetEditTimers = new Map();
+
+const clearAssetEditTimer = (key) => {
+  const timer = assetEditTimers.get(key);
+  if (timer) {
+    clearTimeout(timer);
+    assetEditTimers.delete(key);
+  }
+};
+
+const scheduleAssetEdit = (id, field, value) => {
+  const key = `${id}:${field}`;
+  clearAssetEditTimer(key);
+  assetEditTimers.set(
+    key,
+    setTimeout(() => {
+      assetEditTimers.delete(key);
+      capitalUpdateAsset(id, field, value);
+    }, 350)
+  );
+};
+
 const handleAssetEdit = (event) => {
   const target = event.target;
   const row = target.closest("tr");
@@ -2454,6 +2489,7 @@ const handleAssetEdit = (event) => {
   if (!field) {
     return;
   }
+  clearAssetEditTimer(`${row.dataset.assetId}:${field}`);
   capitalUpdateAsset(row.dataset.assetId, field, target.value);
   if (field === "amount" || field === "invested") {
     const amountInput = row.querySelector('[data-field="amount"]');
@@ -2469,6 +2505,18 @@ const handleAssetEdit = (event) => {
 
 capitalAssetsTable.addEventListener("change", handleAssetEdit);
 capitalAssetsTable.addEventListener("blur", handleAssetEdit, true);
+capitalAssetsTable.addEventListener("input", (event) => {
+  const target = event.target;
+  const row = target.closest("tr");
+  if (!row || !row.dataset.assetId) {
+    return;
+  }
+  const field = target.dataset.field;
+  if (!field) {
+    return;
+  }
+  scheduleAssetEdit(row.dataset.assetId, field, target.value);
+});
 
 capitalAssetsTable.addEventListener("click", (event) => {
   const target = event.target;
