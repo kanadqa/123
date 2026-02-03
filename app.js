@@ -323,6 +323,7 @@ let reportGranularity = "daily";
 let reportRange = { start: "", end: "" };
 let capitalState = migrateCapitalState();
 let capitalOverviewFilter = "all";
+let capitalEditingAssetId = null;
 
 const capitalIsUnconvertible = (asset) =>
   asset.currency !== capitalState.settings.baseCurrency
@@ -1527,7 +1528,7 @@ const renderCapitalAssets = () => {
   const items = capitalState.assets;
   if (!items.length) {
     const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='15' class='hint'>Добавьте первый актив.</td>";
+    row.innerHTML = "<td colspan='14' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
     return;
   }
@@ -1563,44 +1564,25 @@ const renderCapitalAssets = () => {
       })()
       : "—";
     row.innerHTML = `
-      <td><input type="text" value="${item.name}" data-field="name" /></td>
+      <td>${item.name}</td>
+      <td>${capitalTypeLabel(item.type)}</td>
+      <td>${item.currency}</td>
       <td>
-        <select data-field="type">
-          ${["cash", "bank", "deposit", "investment", "real_estate", "other"]
-            .map((value) => `<option value="${value}" ${value === item.type ? "selected" : ""}>${capitalTypeLabel(value)}</option>`)
-            .join("")}
-        </select>
-      </td>
-      <td><input type="text" value="${item.currency}" data-field="currency" maxlength="3" /></td>
-      <td>
-        <input type="number" value="${item.amount}" data-field="amount" step="0.01" />
+        ${item.amount.toFixed(2)}
         <div class="hint">${amountLabel}</div>
       </td>
-      <td><input type="number" value="${invested}" data-field="invested" step="0.01" /></td>
-      <td><span data-field="profit">${profit.toFixed(2)}</span></td>
-      <td><input type="text" value="${item.section || ""}" data-field="section" /></td>
-      <td><input type="text" value="${item.category || ""}" data-field="category" list="capitalCategoryList" /></td>
-      <td><input type="text" value="${item.subcategory || ""}" data-field="subcategory" list="capitalSubcategoryList" /></td>
-      <td><input type="date" value="${item.maturityDate || ""}" data-field="maturityDate" /></td>
+      <td>${invested.toFixed(2)}</td>
+      <td>${profit.toFixed(2)}</td>
+      <td>${item.section || "—"}</td>
+      <td>${item.category || "—"}</td>
+      <td>${item.subcategory || "—"}</td>
+      <td>${item.maturityDate || "—"}</td>
       <td>
-        <input type="number" value="${item.expectedProfit ?? ""}" data-field="expectedProfit" step="0.01" />
+        ${item.expectedProfit != null ? item.expectedProfit.toFixed(2) : "—"}
         <div class="hint">${expectedProfitLabel}</div>
       </td>
-      <td>
-        <select data-field="liquidity">
-          ${["high", "medium", "low", "locked"]
-            .map((value) => `<option value="${value}" ${value === item.liquidity ? "selected" : ""}>${capitalLiquidityLabel(value)}</option>`)
-            .join("")}
-        </select>
-      </td>
-      <td>
-        <div class="inline-field">
-          <input type="number" value="" placeholder="Δ" data-field="delta" step="0.01" />
-          <button class="button secondary" type="button" data-asset-adjust="plus">+</button>
-          <button class="button secondary" type="button" data-asset-adjust="minus">−</button>
-        </div>
-      </td>
-      <td><input type="text" value="${item.note || ""}" data-field="note" /></td>
+      <td>${capitalLiquidityLabel(item.liquidity)}</td>
+      <td>${item.note || "—"}</td>
       <td><button class="button secondary" data-asset-delete="${item.id}">Удалить</button></td>
     `;
     return row;
@@ -1609,13 +1591,13 @@ const renderCapitalAssets = () => {
   grouped.forEach((subcategories, categoryName) => {
     const categoryRow = document.createElement("tr");
     categoryRow.className = "capital-table-section";
-    categoryRow.innerHTML = `<td colspan="15">${categoryName}</td>`;
+    categoryRow.innerHTML = `<td colspan="14">${categoryName}</td>`;
     capitalAssetsTable.appendChild(categoryRow);
 
     subcategories.forEach((assets, subcategoryName) => {
       const subRow = document.createElement("tr");
       subRow.className = "capital-table-subsection";
-      subRow.innerHTML = `<td colspan="15">${subcategoryName}</td>`;
+      subRow.innerHTML = `<td colspan="14">${subcategoryName}</td>`;
       capitalAssetsTable.appendChild(subRow);
       assets.forEach((asset) => {
         capitalAssetsTable.appendChild(buildAssetRow(asset));
@@ -2016,6 +1998,43 @@ const capitalUpdateSnapshotNote = (month, note) => {
   saveCapitalV2(capitalState);
 };
 
+const capitalResetAssetForm = () => {
+  capitalAssetForm.reset();
+  capitalAssetCurrency.value = capitalState.settings.baseCurrency;
+  capitalAssetMaturityDate.value = "";
+  capitalAssetSection.value = "";
+  capitalAssetCategory.value = "";
+  capitalAssetSubcategory.value = "";
+  capitalAssetExpectedProfit.value = "";
+  capitalAssetLiquidityDays.value = "";
+  capitalEditingAssetId = null;
+  const submitButton = capitalAssetForm.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.textContent = "Добавить актив";
+  }
+};
+
+const capitalFillAssetForm = (asset) => {
+  capitalAssetName.value = asset.name || "";
+  capitalAssetType.value = asset.type || "cash";
+  capitalAssetCurrency.value = asset.currency || capitalState.settings.baseCurrency;
+  capitalAssetAmount.value = asset.amount ?? 0;
+  capitalAssetInvested.value = asset.invested ?? asset.amount ?? 0;
+  capitalAssetSection.value = asset.section || "";
+  capitalAssetCategory.value = asset.category || "";
+  capitalAssetSubcategory.value = asset.subcategory || "";
+  capitalAssetMaturityDate.value = asset.maturityDate || "";
+  capitalAssetLiquidity.value = asset.liquidity || "high";
+  capitalAssetLiquidityDays.value = asset.liquidityDays ?? "";
+  capitalAssetExpectedProfit.value = asset.expectedProfit ?? "";
+  capitalAssetNote.value = asset.note || "";
+  capitalEditingAssetId = asset.id;
+  const submitButton = capitalAssetForm.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.textContent = "Сохранить изменения";
+  }
+};
+
 const capitalAddAsset = () => {
   const name = capitalAssetName.value.trim();
   const amount = Number.parseFloat(capitalAssetAmount.value);
@@ -2031,8 +2050,7 @@ const capitalAddAsset = () => {
   if (resolvedCategory) {
     capitalEnsureCategory(resolvedCategory, subcategoryValue);
   }
-  capitalState.assets.push({
-    id: capitalGenerateId("asset"),
+  const payload = {
     name,
     type: capitalAssetType.value,
     currency: capitalAssetCurrency.value.trim().toUpperCase() || capitalState.settings.baseCurrency,
@@ -2048,21 +2066,29 @@ const capitalAddAsset = () => {
       : null,
     maturityDate: isDeposit ? capitalAssetMaturityDate.value : "",
     note: capitalAssetNote.value.trim(),
-    updatedAt: capitalNowIso(),
-  });
-  ensureFxRateForCurrency(capitalState.assets[capitalState.assets.length - 1].currency);
-  capitalState.assets[capitalState.assets.length - 1].unconvertible = capitalIsUnconvertible(
-    capitalState.assets[capitalState.assets.length - 1]
-  );
+  };
+  if (capitalEditingAssetId) {
+    const existing = capitalState.assets.find((item) => item.id === capitalEditingAssetId);
+    if (!existing) {
+      capitalResetAssetForm();
+      return;
+    }
+    Object.assign(existing, payload, { updatedAt: capitalNowIso() });
+    existing.unconvertible = capitalIsUnconvertible(existing);
+    ensureFxRateForCurrency(existing.currency);
+  } else {
+    capitalState.assets.push({
+      id: capitalGenerateId("asset"),
+      ...payload,
+      updatedAt: capitalNowIso(),
+    });
+    ensureFxRateForCurrency(capitalState.assets[capitalState.assets.length - 1].currency);
+    capitalState.assets[capitalState.assets.length - 1].unconvertible = capitalIsUnconvertible(
+      capitalState.assets[capitalState.assets.length - 1]
+    );
+  }
   saveCapitalV2(capitalState);
-  capitalAssetForm.reset();
-  capitalAssetCurrency.value = capitalState.settings.baseCurrency;
-  capitalAssetMaturityDate.value = "";
-  capitalAssetSection.value = "";
-  capitalAssetCategory.value = "";
-  capitalAssetSubcategory.value = "";
-  capitalAssetExpectedProfit.value = "";
-  capitalAssetLiquidityDays.value = "";
+  capitalResetAssetForm();
   renderCapitalView();
 };
 
@@ -2885,110 +2911,22 @@ capitalAssetType.addEventListener("change", () => {
   }
 });
 
-const assetEditTimers = new Map();
-
-const clearAssetEditTimer = (key) => {
-  const timer = assetEditTimers.get(key);
-  if (timer) {
-    clearTimeout(timer);
-    assetEditTimers.delete(key);
-  }
-};
-
-const scheduleAssetEdit = (id, field, value) => {
-  const key = `${id}:${field}`;
-  clearAssetEditTimer(key);
-  assetEditTimers.set(
-    key,
-    setTimeout(() => {
-      assetEditTimers.delete(key);
-      capitalUpdateAsset(id, field, value);
-    }, 350)
-  );
-};
-
-const handleAssetEdit = (event) => {
-  const target = event.target;
-  const row = target.closest("tr");
+capitalAssetsTable.addEventListener("dblclick", (event) => {
+  const row = event.target.closest("tr");
   if (!row || !row.dataset.assetId) {
     return;
   }
-  const field = target.dataset.field;
-  if (!field) {
-    return;
-  }
-  if (field === "delta") {
-    return;
-  }
-  clearAssetEditTimer(`${row.dataset.assetId}:${field}`);
-  capitalUpdateAsset(row.dataset.assetId, field, target.value);
-  if (field === "amount" || field === "invested") {
-    const amountInput = row.querySelector('[data-field="amount"]');
-    const investedInput = row.querySelector('[data-field="invested"]');
-    const profitEl = row.querySelector('[data-field="profit"]');
-    if (amountInput && investedInput && profitEl) {
-      const amount = Number.parseFloat(amountInput.value) || 0;
-      const invested = Number.parseFloat(investedInput.value) || 0;
-      profitEl.textContent = (amount - invested).toFixed(2);
-    }
-  }
-};
-
-const applyAssetDelta = (row, direction) => {
-  const deltaInput = row.querySelector('[data-field="delta"]');
-  const amountInput = row.querySelector('[data-field="amount"]');
-  const investedInput = row.querySelector('[data-field="invested"]');
-  const profitEl = row.querySelector('[data-field="profit"]');
-  if (!deltaInput || !amountInput || !investedInput || !profitEl) {
-    return;
-  }
-  const rawDelta = Number.parseFloat(deltaInput.value);
-  if (Number.isNaN(rawDelta) || rawDelta === 0) {
-    return;
-  }
-  const delta = direction === "minus" ? -rawDelta : rawDelta;
   const asset = capitalState.assets.find((item) => item.id === row.dataset.assetId);
   if (!asset) {
     return;
   }
-  asset.amount = (asset.amount || 0) + delta;
-  asset.invested = (asset.invested || 0) + delta;
-  asset.updatedAt = capitalNowIso();
-  asset.unconvertible = capitalIsUnconvertible(asset);
-  saveCapitalV2(capitalState);
-  amountInput.value = asset.amount;
-  investedInput.value = asset.invested;
-  profitEl.textContent = (asset.amount - asset.invested).toFixed(2);
-  deltaInput.value = "";
-  renderCapitalSummary();
-  renderCapitalLedger();
-  renderCapitalStructureCharts();
-  renderCapitalOverview();
-};
-
-capitalAssetsTable.addEventListener("change", handleAssetEdit);
-capitalAssetsTable.addEventListener("blur", handleAssetEdit, true);
-capitalAssetsTable.addEventListener("input", (event) => {
-  const target = event.target;
-  const row = target.closest("tr");
-  if (!row || !row.dataset.assetId) {
-    return;
-  }
-  const field = target.dataset.field;
-  if (!field || field === "delta") {
-    return;
-  }
-  scheduleAssetEdit(row.dataset.assetId, field, target.value);
+  capitalFillAssetForm(asset);
+  capitalAssetForm.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 capitalAssetsTable.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLButtonElement)) {
-    return;
-  }
-  const row = target.closest("tr");
-  if (row && row.dataset.assetId && target.dataset.assetAdjust) {
-    applyAssetDelta(row, target.dataset.assetAdjust);
     return;
   }
   const id = target.dataset.assetDelete;
