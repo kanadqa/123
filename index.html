@@ -446,8 +446,7 @@
                   </label>
                   <label>
                     Подкатегория
-                    <input type="text" id="capitalAssetSubcategory" list="capitalSubcategoryList" placeholder="Например, Сбербанк" />
-                    <datalist id="capitalSubcategoryList"></datalist>
+                    <select id="capitalAssetSubcategory"></select>
                   </label>
                   <label>
                     Валюта
@@ -498,25 +497,7 @@
                   <h3>Список активов</h3>
                 </div>
                 <div class="capital-assets-view is-active">
-                  <div class="table-wrapper">
-                    <table class="capital-table capital-table-structured">
-                      <thead>
-                        <tr>
-                          <th>Название</th>
-                          <th>Тип</th>
-                          <th>Валюта</th>
-                          <th>Сумма</th>
-                          <th>Вложено</th>
-                          <th>Прибыль</th>
-                          <th>Дата окончания</th>
-                  <th>Потенц. доходность</th>
-                  <th>Ликвидность</th>
-                  <th>Комментарий</th>
-                </tr>
-                      </thead>
-                      <tbody id="capitalAssetsTable"></tbody>
-                    </table>
-                  </div>
+                  <div id="capitalAssetsTable" class="capital-assets-list"></div>
                 </div>
               </div>
             </section>

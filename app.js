@@ -87,7 +87,6 @@ const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
 const capitalAssetAmount = document.getElementById("capitalAssetAmount");
 const capitalAssetInvested = document.getElementById("capitalAssetInvested");
 const capitalAssetSubcategory = document.getElementById("capitalAssetSubcategory");
-const capitalSubcategoryList = document.getElementById("capitalSubcategoryList");
 const capitalAssetMaturityDate = document.getElementById("capitalAssetMaturityDate");
 const capitalAssetLiquidity = document.getElementById("capitalAssetLiquidity");
 const capitalAssetExpectedProfit = document.getElementById("capitalAssetExpectedProfit");
@@ -1670,21 +1669,42 @@ const capitalEnsureCategory = (name, subcategory = "") => {
   }
 };
 
+const renderCapitalSubcategoryOptions = (selectedValue = "") => {
+  if (!capitalAssetSubcategory) {
+    return;
+  }
+  const uniqueSubs = new Set();
+  capitalState.assetCategories.forEach((category) => {
+    category.subs.forEach((sub) => uniqueSubs.add(sub));
+  });
+  capitalAssetSubcategory.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Выберите подкатегорию";
+  capitalAssetSubcategory.appendChild(placeholder);
+  [...uniqueSubs].sort((a, b) => a.localeCompare(b, "ru")).forEach((sub) => {
+    const option = document.createElement("option");
+    option.value = sub;
+    option.textContent = sub;
+    capitalAssetSubcategory.appendChild(option);
+  });
+  if (selectedValue && !uniqueSubs.has(selectedValue)) {
+    const custom = document.createElement("option");
+    custom.value = selectedValue;
+    custom.textContent = selectedValue;
+    capitalAssetSubcategory.appendChild(custom);
+  }
+  capitalAssetSubcategory.value = selectedValue;
+};
+
 const renderCapitalCategories = () => {
   if (!capitalCategoryManager) {
     return;
   }
   capitalCategoryManager.innerHTML = "";
-  capitalSubcategoryList.innerHTML = "";
 
   const sorted = capitalizeAssetCategories();
   sorted.forEach((category) => {
-    category.subs.forEach((sub) => {
-      const subOption = document.createElement("option");
-      subOption.value = sub;
-      capitalSubcategoryList.appendChild(subOption);
-    });
-
     const card = document.createElement("div");
     card.className = "capital-category-card";
     card.innerHTML = `
@@ -1711,15 +1731,17 @@ const renderCapitalCategories = () => {
     card.appendChild(subs);
     capitalCategoryManager.appendChild(card);
   });
+  renderCapitalSubcategoryOptions(capitalAssetSubcategory ? capitalAssetSubcategory.value : "");
 };
 
 const renderCapitalAssets = () => {
   capitalAssetsTable.innerHTML = "";
   const items = capitalState.assets;
   if (!items.length) {
-    const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='10' class='hint'>Добавьте первый актив.</td>";
-    capitalAssetsTable.appendChild(row);
+    const empty = document.createElement("div");
+    empty.className = "capital-assets-empty";
+    empty.textContent = "Добавьте первый актив.";
+    capitalAssetsTable.appendChild(empty);
     return;
   }
   const grouped = new Map();
@@ -1736,9 +1758,9 @@ const renderCapitalAssets = () => {
   });
 
   const buildAssetRow = (item) => {
-    const row = document.createElement("tr");
+    const row = document.createElement("div");
     row.dataset.assetId = item.id;
-    row.classList.add("capital-asset-row");
+    row.classList.add("capital-asset-row", "capital-asset-card");
     const invested = item.invested ?? 0;
     const profit = item.amount - invested;
     const amountInBase = capitalToBase(item.amount, item.currency);
@@ -1756,36 +1778,52 @@ const renderCapitalAssets = () => {
       : "—";
     const maturityLabel = item.type === "deposit" ? (item.maturityDate || "—") : "";
     row.innerHTML = `
-      <td>${item.name}</td>
-      <td>${capitalTypeLabel(item.type)}</td>
-      <td>${item.currency}</td>
-      <td>
-        ${item.amount.toFixed(2)}
-        <div class="hint">${amountLabel}</div>
-      </td>
-      <td>${invested.toFixed(2)}</td>
-      <td>${profit.toFixed(2)}</td>
-      <td>${maturityLabel}</td>
-      <td>
-        ${item.expectedProfit != null ? item.expectedProfit.toFixed(2) : "—"}
-        <div class="hint">${expectedProfitLabel}</div>
-      </td>
-      <td>${capitalLiquidityLabel(item.liquidity)}</td>
-      <td>${item.note || "—"}</td>
+      <div class="capital-asset-main">
+        <div class="capital-asset-title">
+          <strong>${item.name}</strong>
+          <span class="capital-asset-currency">${item.currency}</span>
+        </div>
+        <div class="capital-asset-meta">
+          <span>${capitalTypeLabel(item.type)}</span>
+          <span>${capitalLiquidityLabel(item.liquidity)}</span>
+          ${maturityLabel ? `<span>до ${maturityLabel}</span>` : ""}
+        </div>
+        <div class="capital-asset-note">${item.note || "—"}</div>
+      </div>
+      <div class="capital-asset-numbers">
+        <div>
+          <span class="capital-asset-label">Сумма</span>
+          <strong>${item.amount.toFixed(2)}</strong>
+          <div class="hint">${amountLabel}</div>
+        </div>
+        <div>
+          <span class="capital-asset-label">Вложено</span>
+          <strong>${invested.toFixed(2)}</strong>
+        </div>
+        <div>
+          <span class="capital-asset-label">Прибыль</span>
+          <strong>${profit.toFixed(2)}</strong>
+        </div>
+        <div>
+          <span class="capital-asset-label">Ожид. доходность</span>
+          <strong>${item.expectedProfit != null ? item.expectedProfit.toFixed(2) : "—"}</strong>
+          <div class="hint">${expectedProfitLabel}</div>
+        </div>
+      </div>
     `;
     return row;
   };
 
   grouped.forEach((subcategories, categoryName) => {
-    const categoryRow = document.createElement("tr");
-    categoryRow.className = "capital-table-section";
-    categoryRow.innerHTML = `<td colspan="10">${categoryName}</td>`;
+    const categoryRow = document.createElement("div");
+    categoryRow.className = "capital-asset-group";
+    categoryRow.innerHTML = `<div class="capital-asset-group-title">${categoryName}</div>`;
     capitalAssetsTable.appendChild(categoryRow);
 
     subcategories.forEach((assets, subcategoryName) => {
-      const subRow = document.createElement("tr");
-      subRow.className = "capital-table-subsection";
-      subRow.innerHTML = `<td colspan="10">${subcategoryName}</td>`;
+      const subRow = document.createElement("div");
+      subRow.className = "capital-asset-subgroup";
+      subRow.textContent = subcategoryName;
       capitalAssetsTable.appendChild(subRow);
       assets.forEach((asset) => {
         capitalAssetsTable.appendChild(buildAssetRow(asset));
@@ -2229,7 +2267,7 @@ const capitalFillAssetForm = (asset) => {
   capitalAssetCurrency.value = asset.currency || capitalState.settings.baseCurrency;
   capitalAssetAmount.value = asset.amount ?? 0;
   capitalAssetInvested.value = asset.invested ?? asset.amount ?? 0;
-  capitalAssetSubcategory.value = asset.subcategory || "";
+  renderCapitalSubcategoryOptions(asset.subcategory || "");
   capitalAssetMaturityDate.value = asset.maturityDate || "";
   capitalAssetLiquidity.value = asset.liquidity || "high";
   capitalAssetExpectedProfit.value = asset.expectedProfit ?? "";
@@ -3018,9 +3056,12 @@ capitalTabs.forEach((tab) => {
   });
 });
 
-if (capitalAssetDrawer) {
-  capitalSetAssetDrawer(false);
-}
+  if (capitalAssetDrawer) {
+    capitalSetAssetDrawer(false);
+  }
+  if (capitalAssetSubcategory) {
+    renderCapitalSubcategoryOptions(capitalAssetSubcategory.value);
+  }
 
 if (capitalAssetToggle) {
   capitalAssetToggle.addEventListener("click", () => {
@@ -3191,7 +3232,7 @@ capitalAssetType.addEventListener("change", () => {
 });
 
 capitalAssetsTable.addEventListener("click", (event) => {
-  const row = event.target.closest("tr");
+  const row = event.target.closest("[data-asset-id]");
   if (!row || !row.dataset.assetId) {
     return;
   }
