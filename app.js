@@ -3,6 +3,7 @@ const tableBody = document.getElementById("transactionTable");
 const totalIncomeEl = document.getElementById("totalIncome");
 const totalExpenseEl = document.getElementById("totalExpense");
 const balanceEl = document.getElementById("balance");
+const expensePercentEl = document.getElementById("expensePercent");
 const exportButton = document.getElementById("exportCsv");
 const clearButton = document.getElementById("clearAll");
 const undoButton = document.getElementById("undoAction");
@@ -346,6 +347,8 @@ const updateSummary = () => {
   totalIncomeEl.textContent = currencyFormatter.format(totals.income);
   totalExpenseEl.textContent = currencyFormatter.format(totals.expense);
   balanceEl.textContent = currencyFormatter.format(totals.income - totals.expense);
+  const percent = totals.income > 0 ? (totals.expense / totals.income) * 100 : 0;
+  expensePercentEl.textContent = `${percent.toFixed(1)}% от доходов`;
 };
 
 const renderTable = () => {
@@ -1948,7 +1951,10 @@ const initializeReportRange = () => {
 const resetForm = () => {
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
-  document.getElementById("date").valueAsDate = new Date();
+  const dateInput = document.getElementById("date");
+  if (!dateInput.value) {
+    dateInput.valueAsDate = new Date();
+  }
 };
 
 const setView = (viewId) => {

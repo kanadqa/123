@@ -256,6 +256,11 @@ body {
   font-size: 24px;
 }
 
+.summary-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .summary-card.income strong {
   color: var(--income);
 }
