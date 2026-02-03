@@ -150,9 +150,47 @@ const palette = [
 
 const formatType = (type) => (type === "income" ? "Доход" : "Расход");
 
-const loadTransactions = () => {
+const DB_NAME = "budgetAppDb";
+const DB_VERSION = 1;
+const DB_STORE = "kv";
+
+const dbOpen = () => new Promise((resolve, reject) => {
+  const request = indexedDB.open(DB_NAME, DB_VERSION);
+  request.onupgradeneeded = () => {
+    const db = request.result;
+    if (!db.objectStoreNames.contains(DB_STORE)) {
+      db.createObjectStore(DB_STORE);
+    }
+  };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+
+const dbGet = async (key) => {
+  const db = await dbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, "readonly");
+    const store = tx.objectStore(DB_STORE);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const dbSet = async (key, value) => {
+  const db = await dbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    const store = tx.objectStore(DB_STORE);
+    const request = store.put(value, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const loadTransactions = async () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await dbGet(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch (error) {
     console.error("Не удалось загрузить данные", error);
@@ -179,9 +217,9 @@ const normalizeCategories = (raw) => {
   return raw;
 };
 
-const loadCategories = () => {
+const loadCategories = async () => {
   try {
-    const raw = localStorage.getItem(CATEGORY_KEY);
+    const raw = await dbGet(CATEGORY_KEY);
     if (raw) {
       return normalizeCategories(JSON.parse(raw));
     }
@@ -195,9 +233,9 @@ const loadCategories = () => {
   };
 };
 
-const loadCapitalV2 = () => {
+const loadCapitalV2 = async () => {
   try {
-    const raw = localStorage.getItem(CAPITAL_KEY_V2);
+    const raw = await dbGet(CAPITAL_KEY_V2);
     if (raw) {
       return JSON.parse(raw);
     }
@@ -208,12 +246,12 @@ const loadCapitalV2 = () => {
 };
 
 const saveCapitalV2 = (nextState) => {
-  localStorage.setItem(CAPITAL_KEY_V2, JSON.stringify(nextState));
+  dbSet(CAPITAL_KEY_V2, JSON.stringify(nextState));
 };
 
-const loadCapitalV1 = () => {
+const loadCapitalV1 = async () => {
   try {
-    const raw = localStorage.getItem(CAPITAL_KEY_V1);
+    const raw = await dbGet(CAPITAL_KEY_V1);
     return raw ? JSON.parse(raw) : null;
   } catch (error) {
     console.error("Не удалось загрузить капитал (v1)", error);
@@ -221,14 +259,14 @@ const loadCapitalV1 = () => {
   }
 };
 
-const migrateCapitalState = () => {
-  const existing = loadCapitalV2();
+const migrateCapitalState = async () => {
+  const existing = await loadCapitalV2();
   if (existing) {
     return existing;
   }
 
-  const migratedFlag = localStorage.getItem(CAPITAL_MIGRATED_KEY);
-  const legacy = loadCapitalV1();
+  const migratedFlag = await dbGet(CAPITAL_MIGRATED_KEY);
+  const legacy = await loadCapitalV1();
   const baseState = {
     assets: [],
     debts: [],
@@ -242,7 +280,7 @@ const migrateCapitalState = () => {
 
   if (!legacy || migratedFlag) {
     saveCapitalV2(baseState);
-    localStorage.setItem(CAPITAL_MIGRATED_KEY, "true");
+    dbSet(CAPITAL_MIGRATED_KEY, "true");
     return baseState;
   }
 
@@ -305,31 +343,34 @@ const migrateCapitalState = () => {
     snapshots: mappedSnapshots,
   };
   saveCapitalV2(migrated);
-  localStorage.setItem(CAPITAL_MIGRATED_KEY, "true");
+  dbSet(CAPITAL_MIGRATED_KEY, "true");
   return migrated;
 };
 
 const saveCategories = (nextCategories) => {
-  localStorage.setItem(CATEGORY_KEY, JSON.stringify(nextCategories));
+  dbSet(CATEGORY_KEY, JSON.stringify(nextCategories));
 };
 
-let transactions = loadTransactions();
-let categories = loadCategories();
+let transactions = [];
+let categories = [];
 let historyStack = [];
 let showAllSubcategories = false;
 let showAllExpenseCategories = false;
 let categoryFilter = "all";
 let reportGranularity = "daily";
 let reportRange = { start: "", end: "" };
-let capitalState = migrateCapitalState();
+let capitalState = null;
 let capitalOverviewFilter = "all";
 let capitalEditingAssetId = null;
 
 const capitalIsUnconvertible = (asset) =>
-  asset.currency !== capitalState.settings.baseCurrency
-  && !capitalState.settings.fxRates[asset.currency];
+  asset.currency !== capitalState?.settings?.baseCurrency
+  && !capitalState?.settings?.fxRates?.[asset.currency];
 
 const normalizeCapitalState = () => {
+  if (!capitalState) {
+    return;
+  }
   capitalState.settings = capitalState.settings || { baseCurrency: "RUB", fxRates: {} };
   capitalState.settings.baseCurrency = capitalState.settings.baseCurrency || "RUB";
   capitalState.settings.fxRates = capitalState.settings.fxRates || {};
@@ -405,7 +446,7 @@ const undoLastAction = () => {
   }
   transactions = previous.transactions;
   categories = previous.categories;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
   render();
@@ -2203,7 +2244,7 @@ const renameCategory = (oldName, newName) => {
   transactions = transactions.map((item) =>
     item.category === oldName ? { ...item, category: newName } : item
   );
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2221,7 +2262,7 @@ const renameSubcategory = (categoryName, oldName, newName) => {
       ? { ...item, subcategory: newName }
       : item
   );
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2242,7 +2283,7 @@ const moveSubcategory = (fromCategory, subName, toCategory) => {
       ? { ...item, category: toCategory }
       : item
   );
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2266,7 +2307,7 @@ const moveCategoryToCategory = (fromCategory, toCategory) => {
     return { ...item, category: toCategory, subcategory: nextSubcategory };
   });
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2287,7 +2328,7 @@ const promoteSubcategoryToCategory = (fromCategory, subName) => {
       : item
   );
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2302,7 +2343,7 @@ const deleteSubcategory = (categoryName, subName) => {
       ? { ...item, subcategory: "" }
       : item
   );
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2319,7 +2360,7 @@ const deleteCategory = (categoryName) => {
   transactions = transactions.map((item) =>
     item.category === categoryName ? { ...item, category: fallback, subcategory: "" } : item
   );
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   saveCategories(categories);
   renderCategories();
 };
@@ -2560,6 +2601,15 @@ const resetForm = () => {
 };
 
 const setView = (viewId) => {
+  const page = document.body.dataset.page || "main";
+  if (viewId === "capital" && page === "main") {
+    window.location.href = "capital.html";
+    return;
+  }
+  if (viewId !== "capital" && page === "capital") {
+    window.location.href = "index.html";
+    return;
+  }
   views.forEach((view) => {
     view.classList.toggle("is-active", view.dataset.view === viewId);
   });
@@ -2570,7 +2620,7 @@ const setView = (viewId) => {
   if (activeLabel) {
     viewTitle.textContent = activeLabel.textContent;
   }
-  localStorage.setItem(VIEW_KEY, viewId);
+  dbSet(VIEW_KEY, viewId);
   if (viewId === "capital") {
     renderCapitalView();
   }
@@ -2582,7 +2632,7 @@ const setLayout = (layout) => {
   layoutButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.layout === layout);
   });
-  localStorage.setItem(LAYOUT_KEY, layout);
+  dbSet(LAYOUT_KEY, layout);
 };
 
 form.addEventListener("submit", (event) => {
@@ -2600,7 +2650,7 @@ form.addEventListener("submit", (event) => {
 
   pushHistory();
   transactions.push({ date, type, category, subcategory, amount, note });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   render();
   resetForm();
 });
@@ -2694,7 +2744,7 @@ tableBody.addEventListener("click", (event) => {
 
   pushHistory();
   transactions.splice(index, 1);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   render();
 });
 
@@ -2737,7 +2787,7 @@ clearButton.addEventListener("click", () => {
   }
   pushHistory();
   transactions = [];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  dbSet(STORAGE_KEY, JSON.stringify(transactions));
   render();
 });
 
@@ -3059,12 +3109,26 @@ capitalImportInput.addEventListener("change", async (event) => {
   }
 });
 
-renderCategories();
-resetForm();
-initializeReportRange();
-render();
-capitalSetTab("overview");
-renderCapitalView();
-updateUndoState();
-setView(localStorage.getItem(VIEW_KEY) || "dashboard");
-setLayout(localStorage.getItem(LAYOUT_KEY) || "comfort");
+const initializeApp = async () => {
+  transactions = await loadTransactions();
+  categories = await loadCategories();
+  capitalState = await migrateCapitalState();
+  normalizeCapitalState();
+
+  renderCategories();
+  resetForm();
+  initializeReportRange();
+  render();
+  capitalSetTab("overview");
+  renderCapitalView();
+  updateUndoState();
+
+  const savedView = await dbGet(VIEW_KEY);
+  const savedLayout = await dbGet(LAYOUT_KEY);
+  const page = document.body.dataset.page || "main";
+  const targetView = page === "capital" ? "capital" : (savedView || "dashboard");
+  setView(targetView);
+  setLayout(savedLayout || "comfort");
+};
+
+initializeApp();
