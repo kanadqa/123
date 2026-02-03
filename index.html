@@ -313,18 +313,7 @@
 
           <section class="capital-tab is-active" data-capital-tab-panel="overview">
             <section class="card capital-grid">
-              <div class="capital-card">
-                <div class="chart-title">
-                  <h3>Где лежат деньги</h3>
-                  <div class="capital-summary-inline">
-                    <span>Активы</span>
-                    <strong id="capitalAssetsTotal">0 ₽</strong>
-                  </div>
-                </div>
-                <ul id="capitalAssetList" class="capital-list"></ul>
-              </div>
-
-              <div class="capital-card">
+              <div class="capital-card capital-full">
                 <div class="chart-title">
                   <h3>Структура активов</h3>
                   <div class="chip-group">
@@ -334,6 +323,17 @@
                 </div>
                 <div id="capitalAssetTypeChart" class="chart"></div>
                 <div id="capitalAssetTypePie" class="chart is-hidden"></div>
+              </div>
+
+              <div class="capital-card capital-full">
+                <div class="chart-title">
+                  <h3>Где лежат деньги</h3>
+                  <div class="capital-summary-inline">
+                    <span>Активы</span>
+                    <strong id="capitalAssetsTotal">0 ₽</strong>
+                  </div>
+                </div>
+                <ul id="capitalAssetList" class="capital-list"></ul>
               </div>
             </section>
           </section>

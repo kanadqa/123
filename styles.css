@@ -822,6 +822,10 @@ td {
   gap: 12px;
 }
 
+.capital-card.capital-full {
+  grid-column: 1 / -1;
+}
+
 .capital-form {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   align-items: end;
