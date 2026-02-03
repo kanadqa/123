@@ -312,78 +312,28 @@
           </section>
 
           <section class="capital-tab is-active" data-capital-tab-panel="overview">
-            <section class="summary capital-summary">
-              <div class="summary-card income">
-                <span>Активы</span>
-                <strong id="capitalAssetsTotal">0 ₽</strong>
-              </div>
-              <div class="summary-card expense">
-                <span>Долги</span>
-                <strong id="capitalDebtsTotal">0 ₽</strong>
-              </div>
-              <div class="summary-card balance">
-                <span>Чистый капитал</span>
-                <strong id="capitalNetWorth">0 ₽</strong>
-              </div>
-            </section>
-
             <section class="card capital-grid">
               <div class="capital-card">
-                <h3>Где лежат деньги</h3>
+                <div class="chart-title">
+                  <h3>Где лежат деньги</h3>
+                  <div class="capital-summary-inline">
+                    <span>Активы</span>
+                    <strong id="capitalAssetsTotal">0 ₽</strong>
+                  </div>
+                </div>
                 <ul id="capitalAssetList" class="capital-list"></ul>
               </div>
-              <div class="capital-card">
-                <h3>Валюта и курсы</h3>
-                <div class="form compact-form">
-                  <label>
-                    Базовая валюта
-                    <select id="capitalBaseCurrency">
-                      <option value="RUB">RUB</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </label>
-                </div>
-                <form id="capitalFxForm" class="form compact-form">
-                  <label>
-                    Валюта
-                    <input type="text" id="capitalFxCode" placeholder="USD" maxlength="3" />
-                  </label>
-                  <label>
-                    Курс к базе
-                    <input type="number" id="capitalFxRate" min="0" step="0.0001" />
-                  </label>
-                  <button type="submit" class="button secondary">Добавить курс</button>
-                </form>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Валюта</th>
-                        <th>Курс</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="capitalFxTable"></tbody>
-                  </table>
-                </div>
-              </div>
 
               <div class="capital-card">
-                <h3>Структура активов</h3>
+                <div class="chart-title">
+                  <h3>Структура активов</h3>
+                  <div class="chip-group">
+                    <button class="chip is-active" data-capital-structure="bars">Список</button>
+                    <button class="chip" data-capital-structure="pie">Круговая</button>
+                  </div>
+                </div>
                 <div id="capitalAssetTypeChart" class="chart"></div>
-                <p class="hint">Суммы в базовой валюте.</p>
-              </div>
-
-              <div class="capital-card">
-                <h3>Лучшие сделки</h3>
-                <ul id="capitalTopDeals" class="capital-list"></ul>
-                <p class="hint">Сортировка по прибыли: текущая сумма минус вложено.</p>
-              </div>
-
-              <div class="capital-card">
-                <h3>Предупреждения</h3>
-                <ul id="capitalAlerts" class="capital-alerts"></ul>
+                <div id="capitalAssetTypePie" class="chart is-hidden"></div>
               </div>
             </section>
           </section>
@@ -392,7 +342,8 @@
             <section class="card capital-grid">
               <div class="capital-card">
                 <h3>Добавить актив</h3>
-                <form id="capitalAssetForm" class="form">
+                <p class="hint">Быстро фиксируйте вклад/инвестицию: сколько вложили и сколько сейчас.</p>
+                <form id="capitalAssetForm" class="form capital-form">
                   <label>
                     Название
                     <input type="text" id="capitalAssetName" placeholder="Например, Сбер вклад" required />
@@ -421,16 +372,15 @@
                     <input type="number" id="capitalAssetInvested" min="0" step="0.01" />
                   </label>
                   <label>
-                    Ликвидность
-                    <select id="capitalAssetLiquidity">
-                      <option value="high">Высокая</option>
-                      <option value="mid">Средняя</option>
-                      <option value="low">Низкая</option>
-                    </select>
+                    Доступно до
+                    <input type="date" id="capitalAssetUnlockDate" />
                   </label>
                   <label>
-                    Институт
-                    <input type="text" id="capitalAssetInstitution" placeholder="Например, Тинькофф" />
+                    Ликвидность
+                    <select id="capitalAssetLiquidity">
+                      <option value="anytime">Можно снять в любой момент</option>
+                      <option value="low">Низкая ликвидность</option>
+                    </select>
                   </label>
                   <label class="full">
                     Комментарий
@@ -442,32 +392,39 @@
 
               <div class="capital-card">
                 <div class="chart-title">
-                  <h3>Фильтр по ликвидности</h3>
+                  <h3>Список активов</h3>
                   <div class="chip-group">
-                    <button class="chip is-active" data-capital-liquidity="all">Все</button>
-                    <button class="chip" data-capital-liquidity="high">Высокая</button>
-                    <button class="chip" data-capital-liquidity="mid">Средняя</button>
-                    <button class="chip" data-capital-liquidity="low">Низкая</button>
+                    <button class="chip is-active" data-capital-asset-view="table">Таблица</button>
+                    <button class="chip" data-capital-asset-view="cards">Карточки</button>
+                    <button class="chip" data-capital-asset-view="compact">Минимал</button>
                   </div>
                 </div>
-                <div class="table-wrapper">
-                  <table class="capital-table">
-                    <thead>
-                      <tr>
-                        <th>Название</th>
-                        <th>Тип</th>
-                        <th>Валюта</th>
-                        <th>Сумма</th>
-                        <th>Вложено</th>
-                        <th>Прибыль</th>
-                        <th>Ликвидность</th>
-                        <th>Институт</th>
-                        <th>Комментарий</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="capitalAssetsTable"></tbody>
-                  </table>
+                <div class="capital-assets-view is-active" data-capital-asset-panel="table">
+                  <div class="table-wrapper">
+                    <table class="capital-table">
+                      <thead>
+                        <tr>
+                          <th>Название</th>
+                          <th>Тип</th>
+                          <th>Валюта</th>
+                          <th>Сумма</th>
+                          <th>Вложено</th>
+                          <th>Прибыль</th>
+                          <th>Доступно до</th>
+                          <th>Ликвидность</th>
+                          <th>Комментарий</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody id="capitalAssetsTable"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="capital-assets-view" data-capital-asset-panel="cards">
+                  <div id="capitalAssetsCards" class="capital-cards"></div>
+                </div>
+                <div class="capital-assets-view" data-capital-asset-panel="compact">
+                  <ul id="capitalAssetsCompact" class="capital-list"></ul>
                 </div>
               </div>
             </section>

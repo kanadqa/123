@@ -48,25 +48,23 @@ const capitalAssetsTotal = document.getElementById("capitalAssetsTotal");
 const capitalDebtsTotal = document.getElementById("capitalDebtsTotal");
 const capitalNetWorth = document.getElementById("capitalNetWorth");
 const capitalAssetList = document.getElementById("capitalAssetList");
-const capitalTopDeals = document.getElementById("capitalTopDeals");
-const capitalBaseCurrency = document.getElementById("capitalBaseCurrency");
-const capitalFxForm = document.getElementById("capitalFxForm");
-const capitalFxCode = document.getElementById("capitalFxCode");
-const capitalFxRate = document.getElementById("capitalFxRate");
-const capitalFxTable = document.getElementById("capitalFxTable");
+const capitalStructureButtons = document.querySelectorAll("[data-capital-structure]");
+const capitalAssetTypePie = document.getElementById("capitalAssetTypePie");
 const capitalAssetTypeChart = document.getElementById("capitalAssetTypeChart");
-const capitalAlerts = document.getElementById("capitalAlerts");
 const capitalAssetForm = document.getElementById("capitalAssetForm");
 const capitalAssetName = document.getElementById("capitalAssetName");
 const capitalAssetType = document.getElementById("capitalAssetType");
 const capitalAssetCurrency = document.getElementById("capitalAssetCurrency");
 const capitalAssetAmount = document.getElementById("capitalAssetAmount");
 const capitalAssetInvested = document.getElementById("capitalAssetInvested");
+const capitalAssetUnlockDate = document.getElementById("capitalAssetUnlockDate");
 const capitalAssetLiquidity = document.getElementById("capitalAssetLiquidity");
-const capitalAssetInstitution = document.getElementById("capitalAssetInstitution");
 const capitalAssetNote = document.getElementById("capitalAssetNote");
 const capitalAssetsTable = document.getElementById("capitalAssetsTable");
-const capitalLiquidityChips = document.querySelectorAll("[data-capital-liquidity]");
+const capitalAssetViewButtons = document.querySelectorAll("[data-capital-asset-view]");
+const capitalAssetPanels = document.querySelectorAll("[data-capital-asset-panel]");
+const capitalAssetsCards = document.getElementById("capitalAssetsCards");
+const capitalAssetsCompact = document.getElementById("capitalAssetsCompact");
 const capitalWeightedApr = document.getElementById("capitalWeightedApr");
 const capitalHighestApr = document.getElementById("capitalHighestApr");
 const capitalInterestMonthly = document.getElementById("capitalInterestMonthly");
@@ -228,7 +226,8 @@ const migrateCapitalState = () => {
     currency: "RUB",
     amount: item.amount,
     invested: item.amount,
-    liquidity: "high",
+    liquidity: "anytime",
+    unlockDate: "",
     institution: "",
     note: item.note || "",
     updatedAt: now,
@@ -299,6 +298,8 @@ const normalizeCapitalState = () => {
   capitalState.settings.fxRates = capitalState.settings.fxRates || {};
   capitalState.assets = (capitalState.assets || []).map((asset) => ({
     invested: asset.invested ?? asset.amount ?? 0,
+    liquidity: asset.liquidity ?? "anytime",
+    unlockDate: asset.unlockDate ?? "",
     ...asset,
   }));
   capitalState.debts = capitalState.debts || [];
@@ -965,9 +966,8 @@ const capitalTypeLabel = (type) => ({
 }[type] || type);
 
 const capitalLiquidityLabel = (value) => ({
-  high: "Высокая",
-  mid: "Средняя",
-  low: "Низкая",
+  anytime: "Можно снять",
+  low: "Низкая ликвидность",
 }[value] || value);
 
 const capitalDebtTypeLabel = (value) => ({
@@ -977,16 +977,6 @@ const capitalDebtTypeLabel = (value) => ({
   personal: "Личный долг",
   other: "Другое",
 }[value] || value);
-
-const capitalGetMissingRates = () => {
-  const currencies = new Set(
-    capitalState.assets
-      .map((item) => item.currency)
-      .concat(capitalState.debts.map((item) => item.currency))
-  );
-  currencies.delete(capitalState.settings.baseCurrency);
-  return [...currencies].filter((code) => code && !capitalState.settings.fxRates[code]);
-};
 
 const capitalEnsureSnapshot = () => {
   const month = capitalMonthKey();
@@ -1035,25 +1025,6 @@ const renderCapitalOverview = () => {
     });
   }
 
-  capitalBaseCurrency.value = capitalState.settings.baseCurrency;
-  capitalFxTable.innerHTML = "";
-  const rates = Object.entries(capitalState.settings.fxRates);
-  if (rates.length === 0) {
-    const row = document.createElement("tr");
-    row.innerHTML = "<td colspan='3' class='hint'>Добавьте курсы валют.</td>";
-    capitalFxTable.appendChild(row);
-  } else {
-    rates.forEach(([code, rate]) => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${code}</td>
-        <td>${rate}</td>
-        <td><button class="button secondary" data-fx-remove="${code}">Удалить</button></td>
-      `;
-      capitalFxTable.appendChild(row);
-    });
-  }
-
   const assetTotals = capitalState.assets.reduce((acc, item) => {
     const converted = capitalToBase(item.amount, item.currency);
     acc[item.type] = (acc[item.type] || 0) + (converted ?? 0);
@@ -1065,66 +1036,22 @@ const renderCapitalOverview = () => {
     "Добавьте активы, чтобы увидеть структуру.",
     { limit: 6, formatter }
   );
-
-  capitalAlerts.innerHTML = "";
-  const missingDebts = capitalState.debts.filter(
-    (item) => item.apr == null || item.paymentMin == null
+  renderPie(
+    capitalAssetTypePie,
+    assetTotals,
+    "Добавьте активы, чтобы увидеть структуру."
   );
-  const missingRates = capitalGetMissingRates();
-  if (missingDebts.length === 0 && missingRates.length === 0) {
-    capitalAlerts.innerHTML = "<li class='hint'>Все данные заполнены.</li>";
-    return;
-  }
-  if (missingDebts.length) {
-    const li = document.createElement("li");
-    li.textContent = `У ${missingDebts.length} долгов нет APR или мин. платежа.`;
-    capitalAlerts.appendChild(li);
-  }
-  if (missingRates.length) {
-    const li = document.createElement("li");
-    li.textContent = `Нет курсов для валют: ${missingRates.join(", ")}.`;
-    capitalAlerts.appendChild(li);
-  }
-
-  const deals = capitalState.assets
-    .map((item) => {
-      const current = capitalToBase(item.amount, item.currency);
-      const invested = capitalToBase(item.invested ?? 0, item.currency);
-      if (current == null || invested == null) {
-        return null;
-      }
-      return {
-        name: item.name,
-        profit: current - invested,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.profit - a.profit)
-    .slice(0, 5);
-
-  capitalTopDeals.innerHTML = "";
-  if (!deals.length) {
-    capitalTopDeals.innerHTML = "<li class='hint'>Добавьте активы с вложениями.</li>";
-  } else {
-    deals.forEach((deal) => {
-      const row = document.createElement("li");
-      row.innerHTML = `<span>${deal.name}</span><strong>${capitalFormatShort(deal.profit)}</strong>`;
-      capitalTopDeals.appendChild(row);
-    });
-  }
 };
 
 const renderCapitalAssets = () => {
   capitalAssetsTable.innerHTML = "";
-  const activeFilter = [...capitalLiquidityChips].find((chip) => chip.classList.contains("is-active"))
-    ?.dataset.capitalLiquidity || "all";
-  const items = capitalState.assets.filter((item) =>
-    activeFilter === "all" ? true : item.liquidity === activeFilter
-  );
+  const items = capitalState.assets;
   if (!items.length) {
     const row = document.createElement("tr");
     row.innerHTML = "<td colspan='10' class='hint'>Добавьте первый актив.</td>";
     capitalAssetsTable.appendChild(row);
+    capitalAssetsCards.innerHTML = "<p class='hint'>Добавьте первый актив.</p>";
+    capitalAssetsCompact.innerHTML = "<li class='hint'>Добавьте первый актив.</li>";
     return;
   }
   items.forEach((item) => {
@@ -1145,18 +1072,43 @@ const renderCapitalAssets = () => {
       <td><input type="number" value="${item.amount}" data-field="amount" step="0.01" /></td>
       <td><input type="number" value="${invested}" data-field="invested" step="0.01" /></td>
       <td><span>${profit.toFixed(2)}</span></td>
+      <td><input type="date" value="${item.unlockDate || ""}" data-field="unlockDate" /></td>
       <td>
         <select data-field="liquidity">
-          ${["high", "mid", "low"]
+          ${["anytime", "low"]
             .map((value) => `<option value="${value}" ${value === item.liquidity ? "selected" : ""}>${capitalLiquidityLabel(value)}</option>`)
             .join("")}
         </select>
       </td>
-      <td><input type="text" value="${item.institution || ""}" data-field="institution" /></td>
       <td><input type="text" value="${item.note || ""}" data-field="note" /></td>
       <td><button class="button secondary" data-asset-delete="${item.id}">Удалить</button></td>
     `;
     capitalAssetsTable.appendChild(row);
+  });
+
+  capitalAssetsCards.innerHTML = "";
+  capitalAssetsCompact.innerHTML = "";
+  items.forEach((item) => {
+    const invested = item.invested ?? 0;
+    const profit = item.amount - invested;
+    const card = document.createElement("div");
+    card.className = "capital-card-item";
+    card.innerHTML = `
+      <h4>${item.name}</h4>
+      <div class="capital-card-meta">
+        <span>Тип: ${capitalTypeLabel(item.type)}</span>
+        <span>Сумма: ${item.amount.toFixed(2)} ${item.currency}</span>
+        <span>Вложено: ${invested.toFixed(2)} ${item.currency}</span>
+        <span>Прибыль: ${profit.toFixed(2)} ${item.currency}</span>
+        <span>Доступно до: ${item.unlockDate || "в любое время"}</span>
+        <span>Ликвидность: ${capitalLiquidityLabel(item.liquidity)}</span>
+      </div>
+    `;
+    capitalAssetsCards.appendChild(card);
+
+    const compact = document.createElement("li");
+    compact.innerHTML = `<span>${item.name}</span><strong>${item.amount.toFixed(2)} ${item.currency}</strong>`;
+    capitalAssetsCompact.appendChild(compact);
   });
 };
 
@@ -1466,6 +1418,8 @@ const capitalUpdateAsset = (id, field, value) => {
     asset[field] = value.trim().toUpperCase();
   } else if (field === "amount" || field === "invested") {
     asset[field] = Number.parseFloat(value) || 0;
+  } else if (field === "unlockDate") {
+    asset[field] = value;
   } else {
     asset[field] = value;
   }
@@ -1502,16 +1456,6 @@ const capitalUpdateSnapshotNote = (month, note) => {
   saveCapitalV2(capitalState);
 };
 
-const capitalAddFxRate = (code, rate) => {
-  const upper = code.toUpperCase();
-  if (!upper || Number.isNaN(rate)) {
-    return;
-  }
-  capitalState.settings.fxRates[upper] = rate;
-  saveCapitalV2(capitalState);
-  renderCapitalOverview();
-};
-
 const capitalAddAsset = () => {
   const name = capitalAssetName.value.trim();
   const amount = Number.parseFloat(capitalAssetAmount.value);
@@ -1527,13 +1471,14 @@ const capitalAddAsset = () => {
     amount,
     invested: Number.isNaN(invested) ? amount : invested,
     liquidity: capitalAssetLiquidity.value,
-    institution: capitalAssetInstitution.value.trim(),
+    unlockDate: capitalAssetUnlockDate.value,
     note: capitalAssetNote.value.trim(),
     updatedAt: capitalNowIso(),
   });
   saveCapitalV2(capitalState);
   capitalAssetForm.reset();
   capitalAssetCurrency.value = capitalState.settings.baseCurrency;
+  capitalAssetUnlockDate.value = "";
   renderCapitalView();
 };
 
@@ -2227,45 +2172,28 @@ capitalTabs.forEach((tab) => {
   });
 });
 
-capitalBaseCurrency.addEventListener("change", () => {
-  capitalState.settings.baseCurrency = capitalBaseCurrency.value;
-  saveCapitalV2(capitalState);
-  renderCapitalView();
-});
-
-capitalFxForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const code = capitalFxCode.value.trim();
-  const rate = Number.parseFloat(capitalFxRate.value);
-  capitalAddFxRate(code, rate);
-  capitalFxCode.value = "";
-  capitalFxRate.value = "";
-});
-
-capitalFxTable.addEventListener("click", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLButtonElement)) {
-    return;
-  }
-  const code = target.dataset.fxRemove;
-  if (!code) {
-    return;
-  }
-  delete capitalState.settings.fxRates[code];
-  saveCapitalV2(capitalState);
-  renderCapitalOverview();
-});
-
 capitalAssetForm.addEventListener("submit", (event) => {
   event.preventDefault();
   capitalAddAsset();
 });
 
-capitalLiquidityChips.forEach((chip) => {
-  chip.addEventListener("click", () => {
-    capitalLiquidityChips.forEach((item) => item.classList.remove("is-active"));
-    chip.classList.add("is-active");
-    renderCapitalAssets();
+capitalStructureButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    capitalStructureButtons.forEach((item) => item.classList.remove("is-active"));
+    button.classList.add("is-active");
+    const mode = button.dataset.capitalStructure;
+    capitalAssetTypeChart.classList.toggle("is-hidden", mode !== "bars");
+    capitalAssetTypePie.classList.toggle("is-hidden", mode !== "pie");
+  });
+});
+
+capitalAssetViewButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    capitalAssetViewButtons.forEach((item) => item.classList.remove("is-active"));
+    button.classList.add("is-active");
+    capitalAssetPanels.forEach((panel) => {
+      panel.classList.toggle("is-active", panel.dataset.capitalAssetPanel === button.dataset.capitalAssetView);
+    });
   });
 });
 
